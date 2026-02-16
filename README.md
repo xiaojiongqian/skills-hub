@@ -1,6 +1,7 @@
 # skills-hub
 
 统一维护 **通用 skills** 与 **项目业务扩展（project packs）**，避免把业务逻辑硬编码进 skill 本体。
+`taledraw` 在本仓库中只是一个示例 project pack，用来演示接入方式，不是唯一目标项目。
 
 ## 设计原则
 
@@ -13,6 +14,11 @@
 - 业务逻辑按项目独立演进
 - 不同项目只替换 pack，不重写核心 skill
 
+## 能力定位（跨项目）
+
+- `claude-commands/pr/merge.md`：通用 PR 合并流程（`/pr:merge`），不绑定具体业务仓库。
+- `codex-skills/auto-dev/` 与 `claude-skills/auto-dev.md`：通用自主开发流程（`auto-dev`），通过 project pack 注入项目差异。
+
 ## 仓库结构
 
 ```text
@@ -21,10 +27,11 @@ skills-hub/
 ├── claude-skills/                 # Claude 通用技能（不放业务硬编码）
 ├── claude-commands/               # Claude commands
 ├── project-packs/
-│   └── taledraw/
-│       ├── auto-dev/infer-targets.sh
-│       ├── firebase/references/repo-shortcuts.md
-│       └── PACK.md
+│   ├── taledraw/                  # 示例 pack（案例）
+│   │   ├── auto-dev/infer-targets.sh
+│   │   ├── firebase/references/repo-shortcuts.md
+│   │   └── PACK.md
+│   └── <your-project>/            # 其他项目按同结构扩展
 └── scripts/
     ├── link-local.sh
     ├── link-project-pack.sh
@@ -52,7 +59,10 @@ bash scripts/link-local.sh
 # 查看可用 pack
 bash scripts/link-project-pack.sh --list
 
-# 将 taledraw pack 链接到目标仓库
+# 将指定 pack 链接到目标仓库
+bash scripts/link-project-pack.sh --pack <pack-name> --repo /path/to/target-repo
+
+# 示例：使用 taledraw pack（仅案例）
 bash scripts/link-project-pack.sh --pack taledraw --repo /path/to/target-repo
 ```
 

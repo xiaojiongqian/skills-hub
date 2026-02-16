@@ -7,6 +7,8 @@ model: inherit
 
 # Auto Dev
 
+该 skill 面向多项目复用；项目差异通过 `.skills-hub/` 下的 project pack 注入，不在 skill 本体硬编码业务仓库细节。
+
 ## Guardrails (must follow)
 - 用 `pwd` 和 `git rev-parse --show-toplevel` 确认当前仓库范围，只在当前 worktree 内操作。
 - 用 `git rev-parse --abbrev-ref HEAD` 读取当前分支。

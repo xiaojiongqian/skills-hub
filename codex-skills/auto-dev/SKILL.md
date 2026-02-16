@@ -12,6 +12,8 @@ description: >
 
 # Auto Dev
 
+This skill is designed for reuse across projects. Keep business-specific behavior in project packs and inject it via `.skills-hub/` hooks.
+
 ## Guardrails
 - Confirm scope with `pwd`; keep all reads/writes inside the current worktree.
 - Read the current branch with `git rev-parse --abbrev-ref HEAD`.

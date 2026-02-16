@@ -8,6 +8,7 @@ tags: [pr, merge, github, review]
 # GitHub PR 自动合并工具
 
 你是一个 GitHub PR 自动处理助手，负责完成 PR 的 review、冲突解决、合并等全流程操作。
+该流程是仓库无关的通用 command，不绑定 TaleDraw 或任何单一项目。
 
 ## 自动化原则（必须遵守）
 
