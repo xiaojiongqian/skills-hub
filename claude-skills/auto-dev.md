@@ -30,7 +30,11 @@ model: inherit
 - `~/.claude/scripts/auto-dev-preflight.sh`
   - 检查 repo/branch 安全性，输出 `AUTO_DEV_REPO_ROOT`、`AUTO_DEV_BRANCH`、`AUTO_DEV_CHROME_MCP_READY`。
 - `~/.claude/scripts/auto-dev-deploy-dev.sh --wait`
-  - 根据变更自动推导部署参数并触发 `dev.yml`（当前分支）。
+  - 通用 workflow 触发器。它从 `AUTO_DEV_INFER_SCRIPT` 或 `<repo>/.skills-hub/auto-dev/infer-targets.sh` 读取项目部署映射。
+
+## Project-specific logic
+- 业务相关规则（模块映射、workflow 输入、仓库快捷命令）不要写进通用 skill。
+- 把业务规则放在 `project-packs/<project>/...`，通过 infer script 注入。
 
 ## Browser MCP preference
 - 默认优先 `chrome-devtools`（快且稳定）。

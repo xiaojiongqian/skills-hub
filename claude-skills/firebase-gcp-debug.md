@@ -30,6 +30,10 @@ model: inherit
 - Index 错误: 按报错链接补建索引。
 - Auth 错误: 检查 token 的 `aud`/`iss`/`project_id`。
 
+## Project references (optional)
+- 如果仓库下有 `.skills-hub/firebase/references/`，按需加载其中项目文档。
+- 通用 skill 不应内置业务仓库快捷命令。
+
 ## Safety
 - 不在对话中粘贴 service account 私钥。
 - 优先最小权限与短期凭证。

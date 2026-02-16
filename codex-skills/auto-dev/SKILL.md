@@ -26,7 +26,11 @@ description: >
 
 ## Scripts (in ~/.codex/skills/auto-dev/scripts)
 - `auto-dev-preflight.sh`: verify repo scope and branch safety; emits `AUTO_DEV_REPO_ROOT`, `AUTO_DEV_BRANCH`, and Chrome MCP readiness hints.
-- `auto-dev-deploy-dev.sh`: auto-detect deploy inputs based on changes and trigger the dev workflow for the current branch.
+- `auto-dev-deploy-dev.sh`: generic workflow trigger runner. It reads project-specific deploy mapping from `AUTO_DEV_INFER_SCRIPT` or `<repo>/.skills-hub/auto-dev/infer-targets.sh`.
+
+## Project-specific logic (keep out of core skill)
+- Store business mapping, deployment knobs, and repo shortcuts in a project pack (for example `project-packs/<project>/...`).
+- Keep `SKILL.md` and core scripts generic; inject business behavior via the infer script only.
 
 ## Browser automation preference
 - Default MCP for browser work: **chrome-devtools-mcp** (fast, reliable).

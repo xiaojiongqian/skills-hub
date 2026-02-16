@@ -65,12 +65,10 @@ Tips:
 - Auth:
   - Validate token audience/project mismatch (`aud`, `iss`, `project_id`)
 
-## TaleDraw repo shortcuts (this repo)
+## Project pack references (optional)
 
-- Client UI: `cd client && npm run dev`
-- Callable Functions (func-core): `cd func-core && npm run serve`
-- Web-tier functions: `cd functions-web && npm run serve`
-- End-to-end emulators: run `firebase emulators:start` at repo root
+- If the repo provides project-specific Firebase notes under `.skills-hub/firebase/references/`, read them as needed.
+- Keep core troubleshooting generic; keep repo-specific shortcuts and business docs in project packs.
 
 ## Codex sandbox notes
 

@@ -1,110 +1,104 @@
 # skills-hub
 
-统一维护 Codex 与 Claude 的 skills / commands / MCP 安装脚本。
+统一维护 **通用 skills** 与 **项目业务扩展（project packs）**，避免把业务逻辑硬编码进 skill 本体。
 
-核心目标：
-- 一处维护，双端复用（Codex + Claude）
-- 通过软链接立即生效，不做手工复制
-- 把 Playwright/Chrome MCP 的下载、安装、配置放进脚本
+## 设计原则
 
-## 当前内容
+- 通用层（Core）：`codex-skills/`、`claude-skills/` 只保留可复用流程与规则
+- 业务层（Project Pack）：`project-packs/<project>/` 存放项目特有 md、脚本、映射规则
+- 注入层（Adapter）：通用脚本通过配置/钩子（infer script）加载业务逻辑
 
-### Codex skills（`codex-skills/`）
-- `auto-dev`
-- `chrome-mcp-remote`
-- `firebase-gcp-debug`
-- `gh-address-comments`
-- `gh-fix-ci`
-- `patent-search-cn-us`
+这样可以做到：
+- 技能可跨项目复用
+- 业务逻辑按项目独立演进
+- 不同项目只替换 pack，不重写核心 skill
 
-### Claude skills（`claude-skills/`）
-已与 Codex 侧能力对齐并补齐关键场景：
-- `auto-dev.md`（与 Codex auto-dev guardrails 对齐）
+## 仓库结构
+
+```text
+skills-hub/
+├── codex-skills/                  # Codex 通用技能（不放业务硬编码）
+├── claude-skills/                 # Claude 通用技能（不放业务硬编码）
+├── claude-commands/               # Claude commands
+├── project-packs/
+│   └── taledraw/
+│       ├── auto-dev/infer-targets.sh
+│       ├── firebase/references/repo-shortcuts.md
+│       └── PACK.md
+└── scripts/
+    ├── link-local.sh
+    ├── link-project-pack.sh
+    ├── install-claude-mcp.sh
+    ├── start-chrome-mcp.sh
+    ├── auto-dev-preflight.sh
+    ├── auto-dev-deploy-dev.sh
+    ├── gh-fetch-comments.sh
+    └── gh-inspect-pr-checks.sh
+```
+
+## 快速开始
+
+### 1) 克隆并链接本机技能
+
+```bash
+git clone https://github.com/xiaojiongqian/skills-hub.git ~/skills-hub
+cd ~/skills-hub
+bash scripts/link-local.sh
+```
+
+### 2) 给目标项目注入 project pack（关键）
+
+```bash
+# 查看可用 pack
+bash scripts/link-project-pack.sh --list
+
+# 将 taledraw pack 链接到目标仓库
+bash scripts/link-project-pack.sh --pack taledraw --repo /path/to/target-repo
+```
+
+执行后，目标仓库会出现：
+- `/path/to/target-repo/.skills-hub/auto-dev/infer-targets.sh`
+- `/path/to/target-repo/.skills-hub/firebase/...`
+
+### 3) 在目标仓库运行通用部署脚本
+
+```bash
+cd /path/to/target-repo
+bash ~/.claude/scripts/auto-dev-deploy-dev.sh --wait
+```
+
+`auto-dev-deploy-dev.sh` 会优先读取：
+- `AUTO_DEV_INFER_SCRIPT`（若显式设置）
+- 或 `<repo>/.skills-hub/auto-dev/infer-targets.sh`
+
+## MCP 安装（Claude）
+
+```bash
+bash ~/.claude/scripts/install-claude-mcp.sh --scope user
+bash ~/.claude/scripts/start-chrome-mcp.sh
+claude mcp list
+```
+
+## 当前已同步的 Claude 通用技能
+
+- `auto-dev.md`
 - `firebase-gcp-debug.md`
 - `gh-address-comments.md`
 - `gh-fix-ci.md`
 - `chrome-mcp-remote.md`
 - `playwright-mcp.md`
 
-### Claude commands（`claude-commands/`）
-- `openspec/apply.md`
-- `openspec/archive.md`
-- `openspec/proposal.md`
-- `pr/merge.md`
+## 如何新增一个项目 pack
 
-### Scripts（`scripts/`）
-- `link-local.sh`：把 skills/commands/scripts 链接到 `~/.codex`、`~/.claude`
-- `install-claude-mcp.sh`：下载并配置 `playwright-mcp` + `chrome-devtools`
-- `start-chrome-mcp.sh`：启动 Chrome remote debugging（默认 9223）
-- `auto-dev-preflight.sh`、`auto-dev-deploy-dev.sh`：Claude 侧复用 auto-dev 脚本入口
-- `gh-fetch-comments.sh`、`gh-inspect-pr-checks.sh`：Claude 侧复用 GitHub 辅助脚本
+1. 新建目录：`project-packs/<project>/`
+2. 放入业务内容：
+   - `auto-dev/infer-targets.sh`（变更文件 -> workflow inputs 的映射）
+   - `firebase/references/*.md`（项目专项文档）
+   - 其他业务脚本/文档
+3. 用 `scripts/link-project-pack.sh` 注入到目标仓库 `.skills-hub/`
 
-## 快速开始
+## 约束建议
 
-### 1) 克隆
-
-```bash
-git clone https://github.com/xiaojiongqian/skills-hub.git ~/skills-hub
-cd ~/skills-hub
-```
-
-### 2) 链接到本机（Codex + Claude）
-
-```bash
-bash scripts/link-local.sh
-```
-
-只链接单侧：
-```bash
-bash scripts/link-local.sh --codex-only
-bash scripts/link-local.sh --claude-only
-```
-
-链接后可在 `~/.claude/scripts` 直接使用本仓库脚本。
-
-### 3) 安装 Claude MCP（Playwright + Chrome）
-
-```bash
-bash ~/.claude/scripts/install-claude-mcp.sh --scope user
-```
-
-可选参数：
-```bash
-bash ~/.claude/scripts/install-claude-mcp.sh --scope user --chrome-port 9223
-bash ~/.claude/scripts/install-claude-mcp.sh --download-only
-bash ~/.claude/scripts/install-claude-mcp.sh --configure-only
-```
-
-### 4) 启动 Chrome remote debugging
-
-```bash
-bash ~/.claude/scripts/start-chrome-mcp.sh
-```
-
-### 5) 验证
-
-```bash
-claude mcp list
-ls -la ~/.claude/skills
-ls -la ~/.claude/scripts
-ls -la ~/.codex/skills
-```
-
-## 常用命令
-
-```bash
-# 链接 + 安装 Claude MCP（一步）
-bash scripts/link-local.sh --claude-only --install-claude-mcp
-
-# 仅安装/更新 MCP 注册
-bash scripts/install-claude-mcp.sh --scope user
-
-# 检查 Codex skill frontmatter 合规
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py codex-skills/auto-dev
-```
-
-## 维护说明
-
-- 本仓库优先存放可运行的真实 skill/command/script，而非模板。
-- Claude 与 Codex 的能力同步策略：先维护 Codex skill，再同步到 `claude-skills/`。
-- 对于 GitHub/Firebase/Browser 自动化，优先复用 `scripts/` 中的统一入口，减少重复维护。
+- 不在 core skill 里写业务模块名、业务目录结构、业务部署参数
+- 不在 core script 里写具体仓库 case 分支
+- 业务规则一律放 project pack，并通过 hook/config 注入
