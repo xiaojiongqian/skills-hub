@@ -78,23 +78,25 @@ TodoWrite 任务列表模板（根据 PR 大小调整）：
 中型 PR (100-500 行):
 1. Get PR information
 2. Basic code review
-3. Run code-reviewer agent    ← 必须执行
-4. Prepare merge
-5. Merge PR
-6. Run tests
-7. Push and cleanup
-8. Generate report
-
-大型 PR (> 500 行):
-1. Get PR information
-2. Basic code review
-3. Run code-reviewer agent    ← 必须执行
-4. Run code-simplifier agent  ← 必须执行
+3. PR completeness check (docs & tests)  ← 新增特性 PR 必须执行
+4. Run code-reviewer agent    ← 必须执行
 5. Prepare merge
 6. Merge PR
 7. Run tests
 8. Push and cleanup
 9. Generate report
+
+大型 PR (> 500 行):
+1. Get PR information
+2. Basic code review
+3. PR completeness check (docs & tests)  ← 新增特性 PR 必须执行
+4. Run code-reviewer agent    ← 必须执行
+5. Run code-simplifier agent  ← 必须执行
+6. Prepare merge
+7. Merge PR
+8. Run tests
+9. Push and cleanup
+10. Generate report
 
 ⚠️ 重要：如果 review 发现关键/重要问题：
    → 直接使用 `gh pr review` 回复 PR 具体问题
@@ -137,8 +139,8 @@ gh pr diff <PR号>
 
 根据 PR 的 `additions + deletions` 总数判断：
 - **小型 PR**（< 100 行变更）：执行快速 review（步骤 2.1-2.3）
-- **中型 PR**（100-500 行变更）：执行标准 review（步骤 2.1-2.4，调用 code-reviewer agent）
-- **大型 PR**（> 500 行变更）：执行完整 review（步骤 2.1-2.5，调用多个 QA agents）
+- **中型 PR**（100-500 行变更）：执行标准 review（步骤 2.1-2.5，含完整性检查和 code-reviewer agent）
+- **大型 PR**（> 500 行变更）：执行完整 review（步骤 2.1-2.6，含完整性检查和多个 QA agents）
 
 #### 2.1 基础代码检查（所有 PR 必须执行）
 
@@ -180,6 +182,11 @@ gh pr diff <PR号>
 ### 安全检查
 ✅ 通过 / ⚠️  发现潜在问题
 
+### PR 完整性检查（新增特性 PR）
+- PR 类型: [新增特性/非特性变更]
+- 需求/设计文档: [✅ 已提供 / ⚠️ 缺失 / - 不适用]
+- 单元测试: [✅ 覆盖充分 (M/N, XX%) / ⚠️ 覆盖不足 (M/N, XX%) / ❌ 缺失 / - 不适用]
+
 ### Agent Review 结果（中型/大型 PR）
 - code-reviewer: [已执行/跳过]
 - code-simplifier: [已执行/跳过]
@@ -195,7 +202,96 @@ gh pr diff <PR号>
 推荐 [通过/修复后通过/拒绝]
 ```
 
-#### 2.4 调用 code-reviewer Agent（中型/大型 PR 必须执行）
+#### 2.4 PR 完整性检查（中型/大型 PR 必须执行）
+
+对于新增特性、重大变更等中型/大型 PR，必须检查提交的完整性：
+
+**2.4.1 判断 PR 类型**
+
+根据 PR 标题、分支名和变更内容判断是否为"新增特性"类 PR：
+- 分支名包含 `feat/`、`feature/`、`add/`、`new/` 等前缀
+- PR 标题包含 `feat`、`feature`、`新增`、`添加` 等关键词
+- 变更中包含新文件的创建（`gh pr diff` 中出现 `new file mode`）
+
+如果判定为新增特性 PR，执行以下检查：
+
+**2.4.2 需求/设计文档检查**
+
+```bash
+# 检查 PR 变更中是否包含文档文件
+gh pr diff <PR号> --name-only | grep -iE '\.(md|mdx|txt|doc|docx|adoc|rst)$' | grep -iE '(doc|design|spec|rfc|proposal|requirement|需求|设计|方案)'
+
+# 检查 PR 描述中是否包含设计说明或文档链接
+gh pr view <PR号> --json body | jq -r '.body'
+```
+
+检查标准：
+- ✅ PR 变更中包含需求/设计文档文件
+- ✅ 或 PR 描述中包含设计说明（超过 200 字的功能描述、方案说明）
+- ✅ 或 PR 描述中包含外部文档链接（Notion、Confluence、Google Docs 等）
+- ⚠️ 以上均不满足 → 标记为"缺少需求/设计文档"
+
+**2.4.3 单元测试检查**
+
+```bash
+# 检查 PR 变更中是否包含测试文件
+gh pr diff <PR号> --name-only | grep -iE '\.(test|spec)\.(js|jsx|ts|tsx|py|go|rs|java)$'
+
+# 获取新增/修改的源文件列表（排除测试文件和文档）
+gh pr diff <PR号> --name-only | grep -viE '\.(test|spec)\.' | grep -iE '\.(js|jsx|ts|tsx|py|go|rs|java)$'
+```
+
+检查标准：
+- ✅ 新增了对应的测试文件，且测试覆盖了主要逻辑（新增的公开函数/方法/接口都有对应测试）
+- ⚠️ 有测试文件但覆盖不足（新增了 N 个公开函数，但只有部分有测试）→ 标记为"单元测试覆盖不足"
+- ❌ 完全没有新增或修改测试文件 → 标记为"缺少单元测试"
+
+**测试覆盖度评估方法**：
+1. 从 diff 中提取新增的 `export function`、`export class`、`export const ... = () =>`（或对应语言的公开接口）
+2. 在测试文件的 diff 中搜索是否有对应的 `describe`/`it`/`test` 块引用了这些函数/类名
+3. 覆盖率 = 有测试的公开接口数 / 新增公开接口总数
+
+**2.4.4 完整性检查结果处理**
+
+根据检查结果决定后续流程：
+
+| 文档状态 | 测试状态 | 处理方式 |
+|---------|---------|---------|
+| ✅ 有文档 | ✅ 测试充分 | 继续合并流程 |
+| ✅ 有文档 | ⚠️ 覆盖不足 | 在 review 报告中标注建议，不阻塞合并 |
+| ⚠️ 缺文档 | ✅ 测试充分 | 在 review 报告中标注建议，不阻塞合并 |
+| ⚠️ 缺文档 | ❌ 无测试 | **终止合并流程**，通过 `gh pr review` 反馈 |
+| ✅ 有文档 | ❌ 无测试 | **终止合并流程**，通过 `gh pr review` 反馈 |
+| ⚠️ 缺文档 | ⚠️ 覆盖不足 | 在 review 报告中标注警告，不阻塞合并 |
+
+**终止时的 PR 反馈模板**：
+```bash
+gh pr review <PR号> --comment --body "## 📋 PR 完整性检查未通过
+
+本 PR 被识别为**新增特性**，需要满足以下完整性要求：
+
+### 需求/设计文档
+- 状态: [✅ 已提供 / ⚠️ 缺失]
+- [说明详情]
+
+### 单元测试
+- 状态: [✅ 覆盖充分 / ⚠️ 覆盖不足 / ❌ 缺失]
+- 新增公开接口: N 个
+- 已覆盖测试: M 个
+- 覆盖率: M/N (XX%)
+- [未覆盖的接口列表]
+
+### 建议
+1. [具体建议，如：请为 \`functionName\` 添加单元测试]
+2. [具体建议，如：请补充功能设计文档或在 PR 描述中添加设计说明]
+
+---
+📌 请补充后重新提交，然后运行 \`/pr:merge <PR号>\` 重新合并。
+
+_Review by Claude Code PR Merge Tool_"
+```
+
+#### 2.5 调用 code-reviewer Agent（中型/大型 PR 必须执行）
 
 **必须使用 Task 工具调用 `pr-review-toolkit:code-reviewer` agent**：
 
@@ -209,7 +305,7 @@ Task 工具参数：
 
 等待 agent 返回结果后，将发现的问题整合到 Review 报告中。
 
-#### 2.5 调用 code-simplifier Agent（大型 PR 必须执行）
+#### 2.6 调用 code-simplifier Agent（大型 PR 必须执行）
 
 **必须使用 Task 工具调用 `pr-review-toolkit:code-simplifier` agent**：
 
@@ -251,11 +347,11 @@ Task 工具参数：
 - 建议供 PR 作者参考，可在后续 PR 中处理
 - 不阻塞当前 PR 的合并流程
 
-#### 2.6 Review 结果处理
+#### 2.7 Review 结果处理
 
-根据 review 结果决定后续流程：
+根据 review 结果（包括代码质量和 PR 完整性检查）决定后续流程：
 
-**如果发现关键/重要问题 → 立即终止合并流程**：
+**如果发现关键/重要问题，或 PR 完整性检查未通过 → 立即终止合并流程**：
 
 1. **直接回复 PR 具体问题**：使用 `gh pr review` 添加详细的 review 评论
 2. **向用户展示问题摘要**：在终端显示发现的问题
@@ -298,6 +394,10 @@ PR #<PR号> 存在以下问题需要修复：
 
 ### 重要问题
 1. [问题摘要]
+
+### PR 完整性问题（如适用）
+- 需求/设计文档: [状态及说明]
+- 单元测试: [状态及说明，含覆盖率]
 
 ---
 ✅ 已将详细 review 反馈添加到 PR 评论
@@ -562,6 +662,7 @@ git checkout <original-branch>
 ### Review 摘要
 - 代码质量: [通过/有警告]
 - 安全检查: [通过/有警告]
+- PR 完整性: [通过/有建议/不适用]
 - 代码简化: [无建议/有 N 项建议供后续参考]
 - 测试结果: [全部通过/部分通过]
 
