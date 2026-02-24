@@ -69,16 +69,17 @@ TodoWrite 任务列表模板（根据 PR 大小调整）：
 小型 PR (< 100 行):
 1. Get PR information
 2. Basic code review
-3. Prepare merge
-4. Merge PR
-5. Run tests
-6. Push and cleanup
-7. Generate report
+3. Docs & tests consistency check  ← 必须执行
+4. Prepare merge
+5. Merge PR
+6. Run tests
+7. Push and cleanup
+8. Generate report
 
 中型 PR (100-500 行):
 1. Get PR information
 2. Basic code review
-3. PR completeness check (docs & tests)  ← 新增特性 PR 必须执行
+3. Docs & tests completeness check  ← 必须执行
 4. Run code-reviewer agent    ← 必须执行
 5. Prepare merge
 6. Merge PR
@@ -89,7 +90,7 @@ TodoWrite 任务列表模板（根据 PR 大小调整）：
 大型 PR (> 500 行):
 1. Get PR information
 2. Basic code review
-3. PR completeness check (docs & tests)  ← 新增特性 PR 必须执行
+3. Docs & tests completeness check  ← 必须执行
 4. Run code-reviewer agent    ← 必须执行
 5. Run code-simplifier agent  ← 必须执行
 6. Prepare merge
@@ -138,7 +139,7 @@ gh pr diff <PR号>
 #### 2.0 判断 Review 模式
 
 根据 PR 的 `additions + deletions` 总数判断：
-- **小型 PR**（< 100 行变更）：执行快速 review（步骤 2.1-2.3）
+- **小型 PR**（< 100 行变更）：执行快速 review（步骤 2.1-2.4，含文档/测试一致性检查）
 - **中型 PR**（100-500 行变更）：执行标准 review（步骤 2.1-2.5，含完整性检查和 code-reviewer agent）
 - **大型 PR**（> 500 行变更）：执行完整 review（步骤 2.1-2.6，含完整性检查和多个 QA agents）
 
@@ -182,10 +183,10 @@ gh pr diff <PR号>
 ### 安全检查
 ✅ 通过 / ⚠️  发现潜在问题
 
-### PR 完整性检查（新增特性 PR）
-- PR 类型: [新增特性/非特性变更]
-- 需求/设计文档: [✅ 已提供 / ⚠️ 缺失 / - 不适用]
-- 单元测试: [✅ 覆盖充分 (M/N, XX%) / ⚠️ 覆盖不足 (M/N, XX%) / ❌ 缺失 / - 不适用]
+### 文档与测试完整性检查
+- 检查模式: [严格模式/更新模式/一致性模式]
+- 需求/设计文档: [✅ 通过 / ⚠️ 需同步更新 / ❌ 缺失或与代码矛盾]
+- 单元测试: [✅ 通过 / ⚠️ 需同步更新 / ❌ 缺失或与代码不匹配]
 
 ### Agent Review 结果（中型/大型 PR）
 - code-reviewer: [已执行/跳过]
@@ -202,21 +203,32 @@ gh pr diff <PR号>
 推荐 [通过/修复后通过/拒绝]
 ```
 
-#### 2.4 PR 完整性检查（中型/大型 PR 必须执行）
+#### 2.4 文档与测试完整性检查（所有 PR 必须执行）
 
-对于新增特性、重大变更等中型/大型 PR，必须检查提交的完整性：
+根据 PR 规模采用不同的检查策略：
+- **大型 PR（> 500 行）**：要求同步提交符合要求的文档和单元测试
+- **中小型 PR（≤ 500 行）**：要求文档和单元测试做好必要的更新；若无更新必要，则检查实现代码与现有文档和测试的匹配程度
 
-**2.4.1 判断 PR 类型**
+**2.4.1 判断 PR 类型与检查模式**
 
-根据 PR 标题、分支名和变更内容判断是否为"新增特性"类 PR：
-- 分支名包含 `feat/`、`feature/`、`add/`、`new/` 等前缀
-- PR 标题包含 `feat`、`feature`、`新增`、`添加` 等关键词
-- 变更中包含新文件的创建（`gh pr diff` 中出现 `new file mode`）
+首先判断 PR 性质：
+- **新增特性**：分支名包含 `feat/`、`feature/`、`add/`、`new/` 等前缀，或 PR 标题包含 `feat`、`feature`、`新增`、`添加` 等关键词
+- **重大变更**：变更超过 500 行，或涉及核心模块的大幅修改
+- **常规变更**：bugfix、refactor、chore 等中小规模修改
 
-如果判定为新增特性 PR，执行以下检查：
+根据 PR 性质选择检查模式：
 
-**2.4.2 需求/设计文档检查**
+| PR 性质 | 检查模式 |
+|---------|---------|
+| 新增特性 / 重大变更（大型 PR） | **严格模式**：必须同步提交文档和测试 |
+| 中型常规变更 | **更新模式**：检查是否需要更新文档/测试，需要则必须更新 |
+| 小型常规变更 | **一致性模式**：检查代码变更与现有文档/测试是否仍然匹配 |
 
+---
+
+**2.4.2 严格模式（大型 PR / 新增特性）**
+
+**文档检查**：
 ```bash
 # 检查 PR 变更中是否包含文档文件
 gh pr diff <PR号> --name-only | grep -iE '\.(md|mdx|txt|doc|docx|adoc|rst)$' | grep -iE '(doc|design|spec|rfc|proposal|requirement|需求|设计|方案)'
@@ -225,14 +237,13 @@ gh pr diff <PR号> --name-only | grep -iE '\.(md|mdx|txt|doc|docx|adoc|rst)$' | 
 gh pr view <PR号> --json body | jq -r '.body'
 ```
 
-检查标准：
+必须满足以下至少一项：
 - ✅ PR 变更中包含需求/设计文档文件
-- ✅ 或 PR 描述中包含设计说明（超过 200 字的功能描述、方案说明）
-- ✅ 或 PR 描述中包含外部文档链接（Notion、Confluence、Google Docs 等）
-- ⚠️ 以上均不满足 → 标记为"缺少需求/设计文档"
+- ✅ PR 描述中包含充分的设计说明（超过 200 字的功能描述、方案说明）
+- ✅ PR 描述中包含外部文档链接（Notion、Confluence、Google Docs 等）
+- ❌ 以上均不满足 → **终止合并流程**
 
-**2.4.3 单元测试检查**
-
+**单元测试检查**：
 ```bash
 # 检查 PR 变更中是否包含测试文件
 gh pr diff <PR号> --name-only | grep -iE '\.(test|spec)\.(js|jsx|ts|tsx|py|go|rs|java)$'
@@ -241,52 +252,94 @@ gh pr diff <PR号> --name-only | grep -iE '\.(test|spec)\.(js|jsx|ts|tsx|py|go|r
 gh pr diff <PR号> --name-only | grep -viE '\.(test|spec)\.' | grep -iE '\.(js|jsx|ts|tsx|py|go|rs|java)$'
 ```
 
-检查标准：
-- ✅ 新增了对应的测试文件，且测试覆盖了主要逻辑（新增的公开函数/方法/接口都有对应测试）
-- ⚠️ 有测试文件但覆盖不足（新增了 N 个公开函数，但只有部分有测试）→ 标记为"单元测试覆盖不足"
-- ❌ 完全没有新增或修改测试文件 → 标记为"缺少单元测试"
+必须满足：
+- ✅ 新增了对应的测试文件，且覆盖了主要逻辑（新增的公开函数/方法/接口都有对应测试）
+- ⚠️ 有测试但覆盖不足（覆盖率 < 60%）→ **终止合并流程**
+- ❌ 完全没有新增或修改测试文件 → **终止合并流程**
 
 **测试覆盖度评估方法**：
 1. 从 diff 中提取新增的 `export function`、`export class`、`export const ... = () =>`（或对应语言的公开接口）
 2. 在测试文件的 diff 中搜索是否有对应的 `describe`/`it`/`test` 块引用了这些函数/类名
 3. 覆盖率 = 有测试的公开接口数 / 新增公开接口总数
 
-**2.4.4 完整性检查结果处理**
+---
 
-根据检查结果决定后续流程：
+**2.4.3 更新模式（中型常规变更）**
 
-| 文档状态 | 测试状态 | 处理方式 |
-|---------|---------|---------|
-| ✅ 有文档 | ✅ 测试充分 | 继续合并流程 |
-| ✅ 有文档 | ⚠️ 覆盖不足 | 在 review 报告中标注建议，不阻塞合并 |
-| ⚠️ 缺文档 | ✅ 测试充分 | 在 review 报告中标注建议，不阻塞合并 |
-| ⚠️ 缺文档 | ❌ 无测试 | **终止合并流程**，通过 `gh pr review` 反馈 |
-| ✅ 有文档 | ❌ 无测试 | **终止合并流程**，通过 `gh pr review` 反馈 |
-| ⚠️ 缺文档 | ⚠️ 覆盖不足 | 在 review 报告中标注警告，不阻塞合并 |
+对于中型 PR，不强制要求新增文档和测试，但需要检查变更是否导致现有文档和测试需要同步更新：
+
+**文档更新检查**：
+1. 读取 PR 修改的源文件，识别被修改的公开接口（函数签名变更、参数变更、行为变更）
+2. 在项目中搜索引用了这些接口的文档文件（README、API 文档、设计文档等）
+3. 如果找到相关文档但 PR 中未包含对应的文档更新 → 标记为"文档需要同步更新"
+
+**测试更新检查**：
+1. 读取 PR 修改的源文件，识别被修改的函数/方法
+2. 搜索对应的测试文件，检查是否存在覆盖这些函数的测试用例
+3. 如果存在对应测试但 PR 中未更新 → 检查测试是否仍然与修改后的代码逻辑匹配
+4. 如果测试与代码不匹配（如函数签名变了但测试还在用旧签名）→ 标记为"测试需要同步更新"
+5. 如果修改的函数完全没有对应测试 → 标记为"建议补充测试"
+
+**结果处理**：
+- 文档或测试需要同步更新但未更新 → **终止合并流程**，通过 `gh pr review` 反馈
+- 仅"建议补充测试" → 在 review 报告中标注建议，不阻塞合并
+
+---
+
+**2.4.4 一致性模式（小型常规变更）**
+
+对于小型 PR，执行轻量级的一致性检查：
+
+1. 读取 PR 修改的源文件，识别被修改的函数/方法
+2. 检查对应的测试文件是否存在，如果存在：
+   - 验证测试是否仍然能覆盖修改后的逻辑（如参数变更、返回值变更是否导致测试失效）
+   - 如果测试明显与代码不匹配 → **终止合并流程**，通过 `gh pr review` 反馈
+3. 检查相关文档中的描述是否与修改后的行为一致：
+   - 如果文档描述与代码行为明显矛盾 → **终止合并流程**，通过 `gh pr review` 反馈
+4. 如果一切匹配 → 通过检查，继续合并流程
+
+---
+
+**2.4.5 完整性检查结果处理**
+
+汇总结果决定后续流程：
+
+| 检查模式 | 文档状态 | 测试状态 | 处理方式 |
+|---------|---------|---------|---------|
+| 严格模式 | ❌ 缺失 | 任意 | **终止** |
+| 严格模式 | 任意 | ❌ 缺失或覆盖不足 | **终止** |
+| 严格模式 | ✅ 充分 | ✅ 充分 | 继续 |
+| 更新模式 | ⚠️ 需同步更新 | 任意 | **终止** |
+| 更新模式 | 任意 | ⚠️ 需同步更新 | **终止** |
+| 更新模式 | ✅ 无需更新 | 💡 建议补充 | 标注建议，继续 |
+| 更新模式 | ✅ 无需更新 | ✅ 匹配 | 继续 |
+| 一致性模式 | ❌ 与代码矛盾 | 任意 | **终止** |
+| 一致性模式 | 任意 | ❌ 与代码不匹配 | **终止** |
+| 一致性模式 | ✅ 一致 | ✅ 一致 | 继续 |
 
 **终止时的 PR 反馈模板**：
 ```bash
-gh pr review <PR号> --comment --body "## 📋 PR 完整性检查未通过
+gh pr review <PR号> --comment --body "## 📋 文档与测试完整性检查未通过
 
-本 PR 被识别为**新增特性**，需要满足以下完整性要求：
+### 检查模式: [严格模式/更新模式/一致性模式]
 
 ### 需求/设计文档
-- 状态: [✅ 已提供 / ⚠️ 缺失]
-- [说明详情]
+- 状态: [✅ 已提供 / ⚠️ 需同步更新 / ❌ 缺失 / ❌ 与代码矛盾]
+- [说明详情，如：函数 \`processOrder\` 的参数从 2 个变为 3 个，但 API 文档未更新]
 
 ### 单元测试
-- 状态: [✅ 覆盖充分 / ⚠️ 覆盖不足 / ❌ 缺失]
-- 新增公开接口: N 个
+- 状态: [✅ 覆盖充分 / ⚠️ 需同步更新 / ❌ 缺失 / ❌ 与代码不匹配]
+- [说明详情，如：\`calculateTotal\` 的返回值类型已变更，但测试仍在断言旧类型]
+- 新增/修改公开接口: N 个
 - 已覆盖测试: M 个
 - 覆盖率: M/N (XX%)
-- [未覆盖的接口列表]
 
-### 建议
-1. [具体建议，如：请为 \`functionName\` 添加单元测试]
-2. [具体建议，如：请补充功能设计文档或在 PR 描述中添加设计说明]
+### 需要的操作
+1. [具体操作，如：请更新 \`docs/api.md\` 中 \`processOrder\` 的参数说明]
+2. [具体操作，如：请更新 \`processOrder.test.ts\` 中的测试用例以匹配新的函数签名]
 
 ---
-📌 请补充后重新提交，然后运行 \`/pr:merge <PR号>\` 重新合并。
+📌 请修复后重新提交，然后运行 \`/pr:merge <PR号>\` 重新合并。
 
 _Review by Claude Code PR Merge Tool_"
 ```
@@ -551,34 +604,20 @@ fi
 
 **7.1 代码规范检查**：
 ```bash
-# 根据 PR 修改的模块运行相应的 lint
-if [[ $(git diff --name-only origin/<target-branch> | grep "^client/") ]]; then
-  cd client && npx eslint src --ext .js,.jsx --max-warnings 0
-fi
+# 动态探测项目结构，根据 PR 修改的文件所在模块运行对应的 lint
+# 1. 获取变更文件列表
+git diff --name-only origin/<target-branch>
 
-if [[ $(git diff --name-only origin/<target-branch> | grep "^portal/") ]]; then
-  cd portal && npm run typecheck && npm run lint
-fi
-
-if [[ $(git diff --name-only origin/<target-branch> | grep "^functions-web/") ]]; then
-  cd functions-web && npm run lint
-fi
+# 2. 识别变更涉及的模块目录（包含 package.json 的最近父目录）
+# 3. 对每个受影响的模块，检查 package.json 中可用的 lint/typecheck 脚本
+# 4. 优先运行：npm run lint / npm run typecheck / npx eslint
 ```
 
 **7.2 单元测试**：
 ```bash
-# 根据修改的模块运行测试
-if [[ $(git diff --name-only origin/<target-branch> | grep "^functions-web/") ]]; then
-  cd functions-web && npm run test:unit
-fi
-
-if [[ $(git diff --name-only origin/<target-branch> | grep "^portal/") ]]; then
-  cd portal && npm test
-fi
-
-if [[ $(git diff --name-only origin/<target-branch> | grep "^client/") ]]; then
-  cd client && npm test
-fi
+# 对每个受影响的模块，检查 package.json 中可用的测试脚本
+# 优先运行：npm test / npm run test:unit
+# 如果是非 Node.js 项目，根据项目技术栈选择对应的测试命令（pytest / go test / cargo test 等）
 ```
 
 **如果测试失败**：

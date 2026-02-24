@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/vik.qian/study/taledraw diff HEAD -- .claude/commands/pr/merge.md)",
+      "Bash(git -C /Users/vik.qian/study/taledraw log --oneline -5 -- .claude/)",
+      "Bash(git -C /Users/vik.qian/study/taledraw show c0777b9c --stat)",
+      "Bash(git -C /Users/vik.qian/study/taledraw log --oneline -10 -- .claude/commands/pr/)",
+      "Bash(git -C /Users/vik.qian/study/taledraw check-ignore .claude/commands/pr/merge.md)"
+    ]
+  }
+}

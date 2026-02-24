@@ -1,18 +1,18 @@
 # skills-hub
 
-统一维护 **通用 skills** 与 **项目业务扩展（project packs）**，避免把业务逻辑硬编码进 skill 本体。
-`taledraw` 在本仓库中只是一个示例 project pack，用来演示接入方式，不是唯一目标项目。
+统一维护 **通用 skills**，避免把业务逻辑硬编码进 skill 本体。
+项目专属的脚本、配置和文档应放在各自项目的 `.claude/` 目录下维护，不在本仓库中管理。
 
 ## 设计原则
 
-- 通用层（Core）：`codex-skills/`、`claude-skills/` 只保留可复用流程与规则
-- 业务层（Project Pack）：`project-packs/<project>/` 存放项目特有 md、脚本、映射规则
-- 注入层（Adapter）：通用脚本通过配置/钩子（infer script）加载业务逻辑
+- 通用层（Core）：`codex-skills/`、`claude-skills/`、`claude-commands/` 只保留可复用流程与规则
+- 项目层（Project）：项目专属内容放在各自项目的 `.claude/` 目录下（如 `.claude/scripts/`、`.claude/references/`、`.claude/commands/`）
+- 示例层（Example）：`project-packs/example/` 提供项目扩展的模板和参考
 
 这样可以做到：
-- 技能可跨项目复用
-- 业务逻辑按项目独立演进
-- 不同项目只替换 pack，不重写核心 skill
+- 技能可跨项目复用，通过 `~/.claude/` symlink 全局生效
+- 业务逻辑在各自项目内独立演进，不污染通用仓库
+- 新项目只需 `link-local.sh` 一次，即可使用全部通用能力
 
 ## 能力定位（跨项目）
 
@@ -25,16 +25,14 @@
 skills-hub/
 ├── codex-skills/                  # Codex 通用技能（不放业务硬编码）
 ├── claude-skills/                 # Claude 通用技能（不放业务硬编码）
-├── claude-commands/               # Claude commands
+├── claude-commands/               # Claude commands（通用流程）
 ├── project-packs/
-│   ├── taledraw/                  # 示例 pack（案例）
-│   │   ├── auto-dev/infer-targets.sh
-│   │   ├── firebase/references/repo-shortcuts.md
-│   │   └── PACK.md
-│   └── <your-project>/            # 其他项目按同结构扩展
+│   └── example/                   # 示例模板（供新项目参考）
+│       ├── auto-dev/infer-targets.sh
+│       └── PACK.md
 └── scripts/
-    ├── link-local.sh
-    ├── link-project-pack.sh
+    ├── link-local.sh              # 将通用技能 symlink 到 ~/.claude/
+    ├── link-project-pack.sh       # 将 pack 注入目标仓库（可选）
     ├── install-claude-mcp.sh
     ├── start-chrome-mcp.sh
     ├── auto-dev-preflight.sh
@@ -53,33 +51,33 @@ cd ~/skills-hub
 bash scripts/link-local.sh
 ```
 
-### 2) 给目标项目注入 project pack（关键）
+### 2) 项目专属配置（在各自项目内）
+
+项目专属的脚本、参考文档和 command 放在项目自身的 `.claude/` 目录下：
+
+```
+your-project/.claude/
+├── CLAUDE.md              # 项目开发规范
+├── commands/              # 项目专属 command（如有）
+├── skills/                # 项目专属 skill（如有）
+├── references/            # 项目参考文档
+├── settings.json          # 项目配置
+└── memories/              # agent 记忆
+```
+
+通用的 commands 和 skills 通过 `~/.claude/` 的 symlink 自动加载，项目内不需要重复维护。
+
+### 3)（可选）使用 project pack 模板
+
+如果需要 CI/CD 部署映射等高级功能，可参考 `project-packs/example/` 模板：
 
 ```bash
 # 查看可用 pack
 bash scripts/link-project-pack.sh --list
 
-# 将指定 pack 链接到目标仓库
-bash scripts/link-project-pack.sh --pack <pack-name> --repo /path/to/target-repo
-
-# 示例：使用 taledraw pack（仅案例）
-bash scripts/link-project-pack.sh --pack taledraw --repo /path/to/target-repo
+# 将 pack 注入目标仓库
+bash scripts/link-project-pack.sh --pack example --repo /path/to/target-repo
 ```
-
-执行后，目标仓库会出现：
-- `/path/to/target-repo/.skills-hub/auto-dev/infer-targets.sh`
-- `/path/to/target-repo/.skills-hub/firebase/...`
-
-### 3) 在目标仓库运行通用部署脚本
-
-```bash
-cd /path/to/target-repo
-bash ~/.claude/scripts/auto-dev-deploy-dev.sh --wait
-```
-
-`auto-dev-deploy-dev.sh` 会优先读取：
-- `AUTO_DEV_INFER_SCRIPT`（若显式设置）
-- 或 `<repo>/.skills-hub/auto-dev/infer-targets.sh`
 
 ## MCP 安装（Claude）
 
@@ -98,17 +96,21 @@ claude mcp list
 - `chrome-mcp-remote.md`
 - `playwright-mcp.md`
 
-## 如何新增一个项目 pack
+## 如何为项目添加专属配置
 
-1. 新建目录：`project-packs/<project>/`
-2. 放入业务内容：
-   - `auto-dev/infer-targets.sh`（变更文件 -> workflow inputs 的映射）
-   - `firebase/references/*.md`（项目专项文档）
-   - 其他业务脚本/文档
-3. 用 `scripts/link-project-pack.sh` 注入到目标仓库 `.skills-hub/`
+项目专属内容直接放在项目自身的 `.claude/` 目录下：
+
+1. `CLAUDE.md` — 项目开发规范
+2. `commands/` — 项目专属 command（不与通用 command 同名）
+3. `skills/` — 项目专属 skill
+4. `references/` — 项目参考文档
+5. `settings.json` — 项目级配置
+
+通用能力通过 `~/.claude/` symlink 自动加载，无需在项目内重复维护。
 
 ## 约束建议
 
 - 不在 core skill 里写业务模块名、业务目录结构、业务部署参数
 - 不在 core script 里写具体仓库 case 分支
-- 业务规则一律放 project pack，并通过 hook/config 注入
+- 项目专属内容放在各自项目的 `.claude/` 目录下，不提交到 skills-hub
+- `project-packs/example/` 仅作为模板参考，不维护真实项目数据
