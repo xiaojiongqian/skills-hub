@@ -23,28 +23,29 @@ tags: [pr, merge, github, review]
    - **重要**：不要在任何步骤中使用 AskUserQuestion 或输出"是否继续"之类的提问，直接按流程执行到底。
 2. **code-simplifier 仅提供建议**：调用 code-simplifier agent 时，仅输出简化建议报告，绝不直接修改代码。如果 review（包括 code-reviewer 和基础检查）发现关键/重要问题，直接使用 `gh pr review` 回复 PR 具体问题，然后终止合并流程，不继续往下合并。
 3. **冲突智能处理**：简单冲突（导入语句、格式化、配置合并等）自动解决，不必停下等待用户指令。如果冲突复杂且涉及重大代码逻辑需要人工抉择，则使用 `gh pr review` 提交 PR 意见说明冲突情况，终止合并流程，不继续往下合并。
+4. **失败自动设为 Draft**：当合并流程因任何原因终止（code review 不通过、文档/测试完整性检查不通过、冲突无法自动解决、测试失败、CI 失败等），在提交 PR review comment 后，必须执行 `gh pr ready <PR号> --undo` 将 PR 设为 draft 状态。这样作者修复后标记 Ready for review 时，会自动重新触发合并流程。
 
 ## 使用说明
 
 ### 基本用法
 ```bash
-# 基本用法（合并到 dev 分支，删除原分支）
+# 基本用法（合并到 dev 分支，保留原分支）
 /pr:merge 123
 
 # 指定目标分支
 /pr:merge 123 --target main
 
-# 不删除原分支
-/pr:merge 123 --no-delete
+# 删除原分支
+/pr:merge 123 --delete
 
 # 完整参数
-/pr:merge 123 --target dev --no-delete
+/pr:merge 123 --target dev --delete
 ```
 
 ### 参数说明
 - `PR号`: 必需，GitHub PR 编号（如 123 或 #123）
 - `--target <分支>`: 可选，目标分支，默认为 `dev`
-- `--no-delete`: 可选，保留原分支不删除，默认会删除原分支
+- `--delete`: 可选，合并后删除原分支，默认保留原分支不删除
 - `--worktree`: 可选，使用 git worktree 在临时目录中合并，避免影响当前工作区。默认直接在当前目录操作
 
 ## 工作流程
@@ -54,11 +55,11 @@ tags: [pr, merge, github, review]
 从用户输入中解析参数：
 ```
 输入示例：
-- "123" 或 "#123" → PR#123, target=dev, delete=true, worktree=false
-- "123 --target main" → PR#123, target=main, delete=true, worktree=false
-- "123 --no-delete" → PR#123, target=dev, delete=false, worktree=false
-- "123 --worktree" → PR#123, target=dev, delete=true, worktree=true
-- "PR#100 --target main --no-delete --worktree" → PR#100, target=main, delete=false, worktree=true
+- "123" 或 "#123" → PR#123, target=dev, delete=false, worktree=false
+- "123 --target main" → PR#123, target=main, delete=false, worktree=false
+- "123 --delete" → PR#123, target=dev, delete=true, worktree=false
+- "123 --worktree" → PR#123, target=dev, delete=false, worktree=true
+- "PR#100 --target main --delete --worktree" → PR#100, target=main, delete=true, worktree=true
 ```
 
 使用 TodoWrite 创建任务列表，跟踪整个流程进度。**必须创建以下任务**：
@@ -103,7 +104,8 @@ TodoWrite 任务列表模板（根据 PR 大小调整）：
    → 直接使用 `gh pr review` 回复 PR 具体问题
    → 向用户展示问题摘要
    → 立即终止流程，不继续执行后续步骤
-   → 等待原作者修复后重新运行 `/pr:merge`
+   → 执行 `gh pr ready <PR号> --undo` 将 PR 设为 draft
+   → 等待原作者修复后标记 Ready for review 自动重新触发合并
 ```
 
 ### 1. 获取 PR 信息
@@ -129,7 +131,7 @@ gh pr diff <PR号>
 
 **如果 PR 状态异常**：
 - 已合并或已关闭 → 提示用户并退出
-- CI 失败 → 使用 `gh pr review` 提交 CI 失败详情到 PR 评论，终止合并流程
+- CI 失败 → 使用 `gh pr review` 提交 CI 失败详情到 PR 评论，执行 `gh pr ready <PR号> --undo` 设为 draft，终止合并流程
 - 有冲突 → 记录，后续步骤处理
 
 ### 2. 自动 Code Review（必须执行）
@@ -339,9 +341,12 @@ gh pr review <PR号> --comment --body "## 📋 文档与测试完整性检查未
 2. [具体操作，如：请更新 \`processOrder.test.ts\` 中的测试用例以匹配新的函数签名]
 
 ---
-📌 请修复后重新提交，然后运行 \`/pr:merge <PR号>\` 重新合并。
+📌 请修复后将 PR 重新标记为 **Ready for review**，将自动触发新一轮合并。
 
 _Review by Claude Code PR Merge Tool_"
+
+# 将 PR 设为 draft，等待作者修复后重新标记 ready 自动触发合并
+gh pr ready <PR号> --undo
 ```
 
 #### 2.5 调用 code-reviewer Agent（中型/大型 PR 必须执行）
@@ -446,9 +451,12 @@ gh pr review <PR号> --comment --body "## 🔍 Code Review 发现问题
 - ...
 
 ---
-📌 请修复上述问题后重新提交，然后运行 \`/pr:merge <PR号>\` 重新合并。
+📌 请修复后将 PR 重新标记为 **Ready for review**，将自动触发新一轮合并。
 
 _Review by Claude Code PR Merge Tool_"
+
+# 将 PR 设为 draft，等待作者修复后重新标记 ready 自动触发合并
+gh pr ready <PR号> --undo
 ```
 
 **终止流程后的输出**：
@@ -470,7 +478,7 @@ PR #<PR号> 存在以下问题需要修复：
 
 ---
 ✅ 已将详细 review 反馈添加到 PR 评论
-⏸️ 合并流程已终止，请等待原作者修复后重新运行 `/pr:merge <PR号>`
+🔄 PR 已设为 draft，等待作者修复后标记 Ready for review 自动重新触发合并
 ```
 
 ---
@@ -710,6 +718,7 @@ git diff --name-only origin/<target-branch>
 - 展示失败的测试和错误信息
 - 使用 `gh pr review` 提交测试失败详情到 PR 评论
 - 回滚合并操作（`git merge --abort` 或 `git reset`）
+- 执行 `gh pr ready <PR号> --undo` 将 PR 设为 draft
 - 终止合并流程，不继续往下合并
 
 ### 8. 完成合并
@@ -746,7 +755,7 @@ gh pr view <PR号> --json state,merged
 # 关闭 PR（GitHub 会自动检测到合并并关闭，但我们可以显式关闭）
 gh pr close <PR号> --comment "Auto-merged to <target-branch> by Claude Code 🤖"
 
-# 如果用户指定删除原分支（默认行为）
+# 如果用户显式指定 --delete 才删除原分支（默认不删除）
 if [ "$delete_branch" = true ]; then
   # 删除远程分支
   git push origin --delete <source-branch>
@@ -837,12 +846,14 @@ git checkout <original-branch>
    - 保存当前状态
    - 提供冲突文件列表和冲突内容
    - 使用 `gh pr review` 提交冲突详情到 PR 评论
+   - 执行 `gh pr ready <PR号> --undo` 将 PR 设为 draft
    - 终止合并流程
 
 5. **测试失败**：
    - 展示失败详情
    - 使用 `gh pr review` 提交测试失败详情到 PR 评论
    - 回滚合并操作
+   - 执行 `gh pr ready <PR号> --undo` 将 PR 设为 draft
    - 终止合并流程
 
 6. **推送失败**：
@@ -902,13 +913,13 @@ git checkout <original-branch>
 ```bash
 /pr:merge 123
 ```
-流程：Review → 检查冲突 → 运行测试 → 合并到 dev → 删除原分支
+流程：Review → 检查冲突 → 运行测试 → 合并到 dev → 保留原分支
 
-### 示例 2：合并到 main 并保留原分支
+### 示例 2：合并到 main 并删除原分支
 ```bash
-/pr:merge 456 --target main --no-delete
+/pr:merge 456 --target main --delete
 ```
-流程：Review → 检查冲突 → 运行测试 → 合并到 main → 保留原分支
+流程：Review → 检查冲突 → 运行测试 → 合并到 main → 删除原分支
 
 ### 示例 3：有冲突的 PR
 ```bash
