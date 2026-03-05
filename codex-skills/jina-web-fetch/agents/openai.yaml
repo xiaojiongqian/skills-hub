@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jina Web Fetch"
+  short_description: "Fetch web pages with normal-first then jina.ai fallback"
+  default_prompt: "Fetch a webpage normally first, then retry via jina.ai proxy if direct access fails."
