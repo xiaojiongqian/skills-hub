@@ -53,6 +53,17 @@ tags: [pr, merge, github, review]
 ### 0. 参数解析
 
 从用户输入中解析参数：
+
+**重要：必须先初始化默认值**：
+```bash
+# 初始化默认值（必须执行）
+pr_number=""
+target_branch="dev"
+delete_branch=false    # 默认不删除原分支
+use_worktree=false
+```
+
+然后解析用户输入：
 ```
 输入示例：
 - "123" 或 "#123" → PR#123, target=dev, delete=false, worktree=false
@@ -61,6 +72,12 @@ tags: [pr, merge, github, review]
 - "123 --worktree" → PR#123, target=dev, delete=false, worktree=true
 - "PR#100 --target main --delete --worktree" → PR#100, target=main, delete=true, worktree=true
 ```
+
+**参数解析逻辑**：
+1. 提取 PR 编号（去除 # 前缀）
+2. 检查是否包含 `--target <分支>`，如果有则设置 `target_branch`
+3. 检查是否包含 `--delete`，如果有则设置 `delete_branch=true`（注意：仅当显式指定时才设为 true）
+4. 检查是否包含 `--worktree`，如果有则设置 `use_worktree=true`
 
 使用 TodoWrite 创建任务列表，跟踪整个流程进度。**必须创建以下任务**：
 
