@@ -15,9 +15,15 @@ if [[ "$current_branch" == "HEAD" ]]; then
   exit 1
 fi
 
+repo_name="$(basename "$repo_root")"
+allow_skills_hub_main="${AUTO_DEV_ALLOW_SKILLS_HUB_MAIN:-0}"
 if [[ "$current_branch" == "dev" || "$current_branch" == "main" ]]; then
-  echo "Refusing to operate on protected branch: $current_branch" >&2
-  exit 1
+  if [[ "$current_branch" == "main" && "$repo_name" == "skills-hub" && "$allow_skills_hub_main" == "1" ]]; then
+    echo "Warning: allowing skills-hub main by explicit override (AUTO_DEV_ALLOW_SKILLS_HUB_MAIN=1)." >&2
+  else
+    echo "Refusing to operate on protected branch: $current_branch" >&2
+    exit 1
+  fi
 fi
 
 if [[ -n "$(git status --porcelain)" ]]; then

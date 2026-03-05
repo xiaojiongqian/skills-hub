@@ -5,9 +5,10 @@ description: >
   safety. Trigger when user says "go auto-dev" or asks to start auto-dev. Use
   for coding, testing, MCP/skills (e.g., Playwright), cloud inspection
   (Firestore/Storage/GCP), web browsing, or GitHub Actions deploys for the
-  current branch. Always stay in the current worktree, allow commit/push only
-  on the current branch, and never target dev/main or any other remote branch.
-  Prompt for required credentials or session values via command input.
+  current branch. Default policy blocks dev/main and cross-branch pushes, with
+  a narrow exception for explicit `skills-hub` maintenance on `main` and draft
+  PR handoff. Prompt for required credentials or session values via command
+  input.
 ---
 
 # Auto Dev
@@ -17,10 +18,14 @@ This skill is designed for reuse across projects. Keep business-specific behavio
 ## Guardrails
 - Confirm scope with `pwd`; keep all reads/writes inside the current worktree.
 - Read the current branch with `git rev-parse --abbrev-ref HEAD`.
-- If the branch is `dev` or `main`, stop and ask the user to switch.
-- Never checkout, merge, rebase, or push `dev` or `main`.
-- Never push to any remote branch other than the current branch name.
+- If the branch is `dev` or `main`, stop and ask the user to switch by default.
+- Never checkout, merge, rebase, or push `dev` or `main` by default.
+- Never push to any remote branch other than the current branch name by default.
 - Never force-push or rewrite remote history.
+- `skills-hub` exception (explicit user request only):
+  - Allow operating on `main` only in the `skills-hub` repo.
+  - Allow commit/push to `origin/main` only after task completion and explicit confirmation.
+  - Keep all other protections unchanged.
 
 ## Secure context input
 - Request needed credentials, test accounts, or session values (e.g., `app_session`, test account/password) via command input.
@@ -44,6 +49,11 @@ This skill is designed for reuse across projects. Keep business-specific behavio
 ## Capabilities
 - Use any skills and MCP tools (chrome-devtools-mcp preferred; Playwright as backup) for autonomous development and debugging.
 - Allowed actions include inspecting Firestore/Storage data, accessing GCP, browsing web UIs, and triggering GitHub Actions for the current branch.
+
+## Draft PR and publish flow
+- Preferred handoff after completion: create a draft PR for review context, e.g., `gh pr create --draft --base main --head <current-branch>`.
+- For `skills-hub` only, if the user explicitly requests direct publish to `main`, commit and push to `origin/main`.
+- Keep commit messages scoped and clear so draft PR and direct-push history are both auditable.
 
 ## GitHub Actions deploy (current branch only)
 - Trigger workflows with the current branch ref, e.g., `gh workflow run dev.yml --ref <current-branch>`.
