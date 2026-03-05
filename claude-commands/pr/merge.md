@@ -114,7 +114,7 @@ TodoWrite 任务列表模板（根据 PR 大小调整）：
 
 ```bash
 # 获取 PR 基本信息
-gh pr view <PR号> --json number,title,state,headRefName,baseRefName,author,mergeable,commits,additions,deletions
+gh pr view <PR号> --json number,title,state,isDraft,headRefName,baseRefName,author,mergeable,commits,additions,deletions
 
 # 获取 PR 检查状态
 gh pr checks <PR号>
@@ -125,12 +125,14 @@ gh pr diff <PR号>
 
 **验证项**：
 - PR 状态必须是 `OPEN`
+- PR 不能是 Draft 状态（`isDraft` 必须为 `false`）
 - 检查 CI/CD 状态（GitHub Actions、测试等）
 - 检查是否可以合并（`mergeable` 状态）
 - 确认目标分支与用户指定的一致
 
 **如果 PR 状态异常**：
 - 已合并或已关闭 → 提示用户并退出
+- Draft 状态（`isDraft: true`）→ 提示用户 PR 尚未就绪，需先将 PR 标记为 Ready for Review 后再合并，终止合并流程
 - CI 失败 → 使用 `gh pr review` 提交 CI 失败详情到 PR 评论，执行 `gh pr ready <PR号> --undo` 设为 draft，终止合并流程
 - 有冲突 → 记录，后续步骤处理
 
