@@ -1,6 +1,10 @@
 ---
 name: git-sync-dev-submodules
-description: Simplified sync for current branch and selected submodules: verify current branch has already been merged into `origin/dev`, rebase onto `origin/dev`, then push. Apply the same check/rebase/push flow to submodules (default `func-core`).
+description: >
+  Simplified sync for current branch and selected submodules. Verify the
+  current branch has already been merged into `origin/dev`, rebase onto
+  `origin/dev`, then push. Apply the same check/rebase/push flow to submodules
+  (default `func-core`).
 ---
 
 # Git Sync Dev Submodules
