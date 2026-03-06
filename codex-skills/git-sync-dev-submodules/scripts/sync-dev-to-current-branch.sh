@@ -5,19 +5,20 @@ REMOTE="origin"
 DEV_BRANCH="dev"
 SUBMODULES="func-core"
 SKIP_SUBMODULES=0
-SYNC_MODE="merge"
 
 usage() {
   cat <<USAGE
 Usage: $(basename "$0") [options]
 
-Sync origin/dev into the current branch, then push current branch.
-Optionally sync submodule branches from origin/dev and push them too.
+Simplified sync flow:
+1) Verify current branch content is already merged into origin/dev.
+2) If yes, rebase current branch onto origin/dev.
+3) Push current branch.
+4) Apply the same check/rebase/push flow to selected submodules.
 
 Options:
   --remote <name>           Remote name (default: origin)
-  --dev-branch <name>       Source branch to merge from (default: dev)
-  --sync-mode <mode>        Sync mode: merge|ff-only (default: merge)
+  --dev-branch <name>       Source branch (default: dev)
   --submodules <list|all>   Comma-separated submodule paths, or 'all' (default: func-core)
   --skip-submodules         Skip submodule sync
   --help                    Show this help
@@ -28,20 +29,16 @@ log() {
   printf '[sync-dev] %s\n' "$*"
 }
 
-warn() {
-  printf '[sync-dev][warn] %s\n' "$*" >&2
-}
-
 die() {
   printf '[sync-dev][error] %s\n' "$*" >&2
   exit 1
 }
 
-ensure_mode() {
-  case "$1" in
-    merge|ff-only) ;;
-    *) die "Invalid --sync-mode '$1'. Use: merge or ff-only" ;;
-  esac
+trim() {
+  local s="$1"
+  s="${s#"${s%%[![:space:]]*}"}"
+  s="${s%"${s##*[![:space:]]}"}"
+  printf '%s' "$s"
 }
 
 require_clean_repo() {
@@ -50,13 +47,6 @@ require_clean_repo() {
   if [[ -n "$(git -C "$repo_path" status --porcelain)" ]]; then
     die "$label has uncommitted changes. Commit or stash first."
   fi
-}
-
-trim() {
-  local s="$1"
-  s="${s#"${s%%[![:space:]]*}"}"
-  s="${s%"${s##*[![:space:]]}"}"
-  printf '%s' "$s"
 }
 
 resolve_submodule_paths() {
@@ -96,28 +86,17 @@ checkout_branch_if_needed() {
   local remote="$3"
 
   if git -C "$repo_path" show-ref --verify --quiet "refs/heads/$branch"; then
-    git -C "$repo_path" checkout "$branch"
+    git -C "$repo_path" checkout "$branch" >/dev/null
     return 0
   fi
 
   if git -C "$repo_path" show-ref --verify --quiet "refs/remotes/$remote/$branch"; then
-    git -C "$repo_path" checkout -b "$branch" --track "$remote/$branch"
+    git -C "$repo_path" checkout -b "$branch" --track "$remote/$branch" >/dev/null
     return 0
   fi
 
-  return 1
-}
-
-array_contains() {
-  local needle="$1"
-  shift
-  local item=""
-  for item in "$@"; do
-    if [[ "$item" == "$needle" ]]; then
-      return 0
-    fi
-  done
-  return 1
+  # Create new branch from origin/dev when no same-name branch exists yet.
+  git -C "$repo_path" checkout -b "$branch" "$remote/$DEV_BRANCH" >/dev/null
 }
 
 read_dev_counts() {
@@ -127,87 +106,21 @@ read_dev_counts() {
   printf '%s %s\n' "$(awk '{print $1}' <<<"$raw")" "$(awk '{print $2}' <<<"$raw")"
 }
 
-assert_contains_dev() {
+ensure_merged_into_dev() {
   local repo_path="$1"
   local label="$2"
-  local behind ahead
-  read -r behind ahead < <(read_dev_counts "$repo_path")
-  if [[ "$behind" != "0" ]]; then
-    die "$label does not contain '$REMOTE/$DEV_BRANCH' after sync (behind=$behind ahead=$ahead)."
+  if ! git -C "$repo_path" merge-base --is-ancestor HEAD "$REMOTE/$DEV_BRANCH"; then
+    local behind ahead
+    read -r behind ahead < <(read_dev_counts "$repo_path")
+    die "$label contains commits not merged into '$REMOTE/$DEV_BRANCH' (behind=$behind ahead=$ahead). Merge it to dev first, then re-run."
   fi
 }
 
-merge_superproject_with_dev() {
-  local super_branch="$1"
-  local behind ahead
-  read -r behind ahead < <(read_dev_counts "$REPO_ROOT")
-
-  if [[ "$behind" == "0" ]]; then
-    log "Superproject already contains '$REMOTE/$DEV_BRANCH' (ahead=$ahead)"
-    return 0
-  fi
-
-  if [[ "$ahead" == "0" ]]; then
-    log "Fast-forward superproject branch '$super_branch' with '$REMOTE/$DEV_BRANCH'"
-    git merge --ff-only "$REMOTE/$DEV_BRANCH"
-    assert_contains_dev "$REPO_ROOT" "Superproject branch '$super_branch'"
-    return 0
-  fi
-
-  if [[ "$SYNC_MODE" == "ff-only" ]]; then
-    die "Superproject branch '$super_branch' diverged from '$REMOTE/$DEV_BRANCH' (behind=$behind ahead=$ahead). Re-run with --sync-mode merge."
-  fi
-
-  log "Merge superproject branch '$super_branch' with '$REMOTE/$DEV_BRANCH' (diverged: behind=$behind ahead=$ahead)"
-  set +e
-  git merge --no-ff --no-commit "$REMOTE/$DEV_BRANCH"
-  local merge_rc=$?
-  set -e
-
-  if [[ "$merge_rc" -eq 0 ]]; then
-    git commit -m "merge: sync $REMOTE/$DEV_BRANCH into $super_branch"
-    assert_contains_dev "$REPO_ROOT" "Superproject branch '$super_branch'"
-    return 0
-  fi
-
-  local unresolved_paths=()
-  local unresolved_item=""
-  while IFS= read -r unresolved_item; do
-    if [[ -n "$unresolved_item" ]]; then
-      unresolved_paths+=("$unresolved_item")
-    fi
-  done < <(git diff --name-only --diff-filter=U)
-  if [[ ${#unresolved_paths[@]} -eq 0 ]]; then
-    git merge --abort || true
-    die "Superproject merge failed for unknown reason."
-  fi
-
-  local p=""
-  local mode=""
-  for p in "${unresolved_paths[@]}"; do
-    mode="$(git ls-files -u -- "$p" | awk 'NR==1 {print $1}')"
-    if [[ "$mode" != "160000" ]]; then
-      git merge --abort || true
-      die "Superproject merge conflict is not a submodule pointer: '$p'. Resolve manually."
-    fi
-
-    if [[ "$SKIP_SUBMODULES" -eq 0 ]] && array_contains "$p" "${submodule_paths[@]}"; then
-      log "Auto-resolve submodule conflict '$p' with ours (selected for re-sync)"
-      git checkout --ours -- "$p"
-    else
-      log "Auto-resolve submodule conflict '$p' with theirs"
-      git checkout --theirs -- "$p"
-    fi
-    git add "$p"
-  done
-
-  if [[ -n "$(git diff --name-only --diff-filter=U)" ]]; then
-    git merge --abort || true
-    die "Unresolved conflicts remain after submodule conflict auto-resolution."
-  fi
-
-  git commit -m "merge: sync $REMOTE/$DEV_BRANCH into $super_branch"
-  assert_contains_dev "$REPO_ROOT" "Superproject branch '$super_branch'"
+rebase_to_dev() {
+  local repo_path="$1"
+  local label="$2"
+  log "Rebase $label onto '$REMOTE/$DEV_BRANCH'"
+  git -C "$repo_path" rebase "$REMOTE/$DEV_BRANCH" >/dev/null
 }
 
 sync_one_submodule() {
@@ -216,44 +129,21 @@ sync_one_submodule() {
 
   [[ -e "$sub_path" ]] || die "Submodule path '$sub_path' does not exist."
 
-  git submodule update --init --recursive "$sub_path"
-
+  git submodule update --init --recursive "$sub_path" >/dev/null
   require_clean_repo "$sub_path" "Submodule '$sub_path'"
 
-  git -C "$sub_path" fetch "$REMOTE" --prune
-
+  git -C "$sub_path" fetch "$REMOTE" --prune >/dev/null
   git -C "$sub_path" show-ref --verify --quiet "refs/remotes/$REMOTE/$DEV_BRANCH" \
-    || die "Submodule '$sub_path' has no '$REMOTE/$DEV_BRANCH'."
+    || die "Submodule '$sub_path' missing '$REMOTE/$DEV_BRANCH'."
 
-  local sub_branch="$super_branch"
+  checkout_branch_if_needed "$sub_path" "$super_branch" "$REMOTE"
+  ensure_merged_into_dev "$sub_path" "Submodule '$sub_path' branch '$super_branch'"
+  rebase_to_dev "$sub_path" "submodule '$sub_path' branch '$super_branch'"
 
-  if ! checkout_branch_if_needed "$sub_path" "$sub_branch" "$REMOTE"; then
-    log "Create submodule branch '$sub_branch' in '$sub_path'"
-    git -C "$sub_path" checkout -b "$sub_branch"
-  fi
+  log "Push submodule '$sub_path' branch '$super_branch'"
+  git -C "$sub_path" push "$REMOTE" "$super_branch" >/dev/null
 
-  local behind ahead
-  read -r behind ahead < <(read_dev_counts "$sub_path")
-
-  if [[ "$behind" == "0" ]]; then
-    log "Submodule '$sub_path' branch '$sub_branch' already contains '$REMOTE/$DEV_BRANCH' (ahead=$ahead)"
-  elif [[ "$ahead" == "0" ]]; then
-    log "Fast-forward submodule '$sub_path' branch '$sub_branch' with '$REMOTE/$DEV_BRANCH'"
-    git -C "$sub_path" merge --ff-only "$REMOTE/$DEV_BRANCH"
-  else
-    if [[ "$SYNC_MODE" == "ff-only" ]]; then
-      die "Submodule '$sub_path' branch '$sub_branch' diverged from '$REMOTE/$DEV_BRANCH' (behind=$behind ahead=$ahead). Re-run with --sync-mode merge."
-    fi
-    log "Merge submodule '$sub_path' branch '$sub_branch' with '$REMOTE/$DEV_BRANCH' (diverged: behind=$behind ahead=$ahead)"
-    git -C "$sub_path" merge --no-ff "$REMOTE/$DEV_BRANCH" -m "merge($sub_path): sync $REMOTE/$DEV_BRANCH into $sub_branch"
-  fi
-
-  assert_contains_dev "$sub_path" "Submodule '$sub_path' branch '$sub_branch'"
-
-  log "Push submodule '$sub_path' branch '$sub_branch'"
-  git -C "$sub_path" push "$REMOTE" "$sub_branch"
-
-  synced_submodules+=("$sub_path:$sub_branch")
+  synced_submodules+=("$sub_path:$super_branch")
 }
 
 while [[ $# -gt 0 ]]; do
@@ -266,11 +156,6 @@ while [[ $# -gt 0 ]]; do
     --dev-branch)
       [[ $# -lt 2 ]] && die "Missing value for --dev-branch"
       DEV_BRANCH="$2"
-      shift 2
-      ;;
-    --sync-mode)
-      [[ $# -lt 2 ]] && die "Missing value for --sync-mode"
-      SYNC_MODE="$2"
       shift 2
       ;;
     --submodules)
@@ -295,19 +180,16 @@ done
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 [[ -z "$REPO_ROOT" ]] && die "Not inside a git repository"
 cd "$REPO_ROOT"
-ensure_mode "$SYNC_MODE"
 
 SUPER_BRANCH="$(git symbolic-ref --quiet --short HEAD || true)"
 [[ -z "$SUPER_BRANCH" ]] && die "Superproject is in detached HEAD state"
 
 log "Repository: $REPO_ROOT"
 log "Current branch: $SUPER_BRANCH"
-log "Sync mode: $SYNC_MODE"
 
 require_clean_repo "$REPO_ROOT" "Superproject"
 
-git fetch "$REMOTE" --prune
-
+git fetch "$REMOTE" --prune >/dev/null
 if ! git show-ref --verify --quiet "refs/remotes/$REMOTE/$DEV_BRANCH"; then
   die "Missing '$REMOTE/$DEV_BRANCH' in superproject"
 fi
@@ -324,7 +206,7 @@ if [[ "$SKIP_SUBMODULES" -eq 0 ]]; then
     local_item=""
     for local_item in "${submodule_paths[@]}"; do
       [[ -e "$local_item" ]] || die "Selected submodule '$local_item' does not exist."
-      git submodule update --init --recursive "$local_item"
+      git submodule update --init --recursive "$local_item" >/dev/null
       require_clean_repo "$local_item" "Submodule '$local_item'"
     done
   fi
@@ -332,7 +214,8 @@ else
   log "Skip submodule sync by flag"
 fi
 
-merge_superproject_with_dev "$SUPER_BRANCH"
+ensure_merged_into_dev "$REPO_ROOT" "Superproject branch '$SUPER_BRANCH'"
+rebase_to_dev "$REPO_ROOT" "superproject branch '$SUPER_BRANCH'"
 
 if [[ "$SKIP_SUBMODULES" -eq 0 ]] && [[ ${#submodule_paths[@]} -gt 0 ]]; then
   local_item=""
@@ -354,13 +237,13 @@ fi
 
 if [[ ${#changed_submodule_paths[@]} -gt 0 ]]; then
   git add "${changed_submodule_paths[@]}"
-  commit_msg="chore: sync submodule(s) ${changed_submodule_paths[*]} to $DEV_BRANCH"
+  commit_msg="chore: sync submodule(s) ${changed_submodule_paths[*]} to $DEV_BRANCH via rebase"
   log "Commit superproject submodule pointer update"
-  git commit -m "$commit_msg"
+  git commit -m "$commit_msg" >/dev/null
 fi
 
 log "Push superproject branch '$SUPER_BRANCH'"
-git push "$REMOTE" "$SUPER_BRANCH"
+git push "$REMOTE" "$SUPER_BRANCH" >/dev/null
 
 log "Done"
 log "Superproject HEAD: $(git rev-parse --short HEAD)"

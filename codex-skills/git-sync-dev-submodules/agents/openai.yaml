@@ -1,4 +1,4 @@
 interface:
   display_name: "Git Sync Dev + Submodules"
-  short_description: "Sync current branch and submodules from dev, then push"
-  default_prompt: "Use $git-sync-dev-submodules to sync my current worktree branch and func-core from dev, then push to origin."
+  short_description: "If already merged into dev, rebase current branch/submodules to dev, then push"
+  default_prompt: "Use $git-sync-dev-submodules to verify my current branch and func-core are already merged into dev, then rebase both onto dev and push."

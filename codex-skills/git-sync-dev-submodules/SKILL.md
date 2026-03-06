@@ -1,44 +1,39 @@
 ---
 name: git-sync-dev-submodules
-description: Sync `origin/dev` into the current local branch in the current worktree, then push that branch to remote. Also sync and push submodule branches (default `func-core`) from `origin/dev` to the same branch name. Default behavior uses merge sync when branches diverge to guarantee true alignment (both superproject and selected submodules contain `origin/dev`), with `ff-only` available as an opt-in strict mode.
+description: Simplified sync for current branch and selected submodules: verify current branch has already been merged into `origin/dev`, rebase onto `origin/dev`, then push. Apply the same check/rebase/push flow to submodules (default `func-core`).
 ---
 
 # Git Sync Dev Submodules
 
 ## Overview
-- Run the bundled script to align the current branch with `origin/dev`, sync selected submodules from `origin/dev` to the same branch name, and push all updated branches.
-- Default mode is `merge` for true alignment when branches diverge; use `ff-only` only when you explicitly want strict fast-forward behavior.
-- Use this for repetitive "sync dev -> current branch + submodule + push" operations across different worktrees.
+- This skill is now **rebase-first and merge-gated**.
+- It only syncs when your current branch content is already merged into `origin/dev`.
+- If branch content is not merged into `origin/dev`, it stops and asks you to merge to `dev` first.
+- After superproject sync, it applies the same logic to selected submodules and pushes them.
 
 ## Workflow
 1. Confirm you are inside the target worktree and on the intended branch.
-2. Run `scripts/sync-dev-to-current-branch.sh` from any path inside that repo.
-3. Review the final summary and report the branch/commit results.
+2. Script checks whether current branch is already merged into `origin/dev`.
+3. If yes, rebase current branch onto `origin/dev` and push.
+4. Run the same merged-check + rebase + push flow for selected submodules.
 
 ## Script
 - Path: `scripts/sync-dev-to-current-branch.sh`
 - Defaults:
   - Remote: `origin`
   - Dev source branch: `dev`
-  - Sync mode: `merge`
   - Submodules: `func-core`
 - Safety:
   - Stop if superproject has uncommitted changes.
   - Stop if selected submodule has uncommitted changes.
-  - Enforce post-sync validation: superproject and each selected submodule must contain `origin/dev` (`behind=0`).
-  - Auto-resolve superproject submodule-pointer conflicts during merge:
-    - selected submodules: keep `ours` (then re-sync submodule branch and commit pointer)
-    - unselected submodules: keep `theirs`
-  - Submodule source-code merge conflicts are not auto-resolved; script stops for manual resolution.
-  - Stop on non-submodule merge conflicts for manual resolution.
+  - Stop if current branch is not yet merged into `origin/dev`.
+  - Stop if selected submodule branch is not yet merged into `origin/dev`.
+  - Validate final alignment (`origin/dev...HEAD`) in summary.
 
 ## Common Commands
 ```bash
-# Default: sync current branch + func-core from origin/dev, then push
+# Default: verify merged -> rebase -> push (superproject + func-core)
 ~/.codex/skills/git-sync-dev-submodules/scripts/sync-dev-to-current-branch.sh
-
-# Strict fast-forward only (abort on divergence)
-~/.codex/skills/git-sync-dev-submodules/scripts/sync-dev-to-current-branch.sh --sync-mode ff-only
 
 # Sync all submodules defined in .gitmodules
 ~/.codex/skills/git-sync-dev-submodules/scripts/sync-dev-to-current-branch.sh --submodules all
@@ -52,8 +47,7 @@ description: Sync `origin/dev` into the current local branch in the current work
 
 ## Options
 - `--remote <name>`: remote name to fetch/push (default `origin`)
-- `--dev-branch <name>`: source branch to merge from (default `dev`)
-- `--sync-mode <merge|ff-only>`: merge diverged branches (default) or require strict fast-forward
+- `--dev-branch <name>`: source branch to rebase onto (default `dev`)
 - `--submodules <list|all>`: comma-separated submodule paths, or `all` (default `func-core`)
 - `--skip-submodules`: do not process any submodule
 - `--help`: print usage
