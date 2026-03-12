@@ -27,6 +27,16 @@ npx skills add xiaojiongqian/skills-hub --skill auto-dev
 npx skills add xiaojiongqian/skills-hub --list
 ```
 
+## 安装机制
+
+- `npx skills add` 会先发现仓库中的标准 skill，然后安装到你选择的 agent 和范围（project 或 global）。
+- 默认推荐安装方式是 `symlink`：
+  - 先写入一份公共 canonical skill 目录
+  - 再让具体 agent 复用这份内容；非 universal agent 通常通过软链接接入
+- 如果使用 `--copy`，则会为每个目标 agent 写入独立副本，而不是共享同一份 skill 内容。
+- 当本机有多个已支持的 agent 时，CLI 会探测并安装到你选择的 agent；未被官方 CLI 支持的 agent 不会自动安装。
+- 同名 skill 在同一安装范围内会被覆盖更新；不同名 skill 不受影响。
+
 ## 更新
 
 仓库维护者只需要更新 `skills/` 下对应 skill 并推送到 GitHub：
