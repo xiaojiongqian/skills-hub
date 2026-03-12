@@ -1,5 +1,7 @@
 ---
 name: firebase-gcp-debug
+version: 1.0.0
+license: MIT
 description: Debug Firebase and Google Cloud issues (emulators, Cloud Functions v1/v2, Firestore/Auth/Storage) using `firebase` and `gcloud` CLIs. Use when investigating Firebase 部署/函数报错, emulator 启动失败, Firestore 权限/索引问题, or when you need to query GCP Cloud Logging / Cloud Run logs for Firebase-backed services.
 ---
 
@@ -70,10 +72,10 @@ Tips:
 - If the repo provides project-specific Firebase notes under `.skills-hub/firebase/references/`, read them as needed.
 - Keep core troubleshooting generic; keep repo-specific shortcuts and business docs in project packs.
 
-## Codex sandbox notes
+## Execution notes
 
-- Any command that reaches the network (Firebase/GCP APIs, `gcloud`, `firebase`) may require approval.
-- When running such commands, request escalation and include a 1-sentence justification.
+- Any command that reaches Firebase/GCP APIs may require network access, auth context, or sandbox approval depending on the host agent.
+- If your agent gates CLI or network calls, enable that access before running `firebase` or `gcloud`.
 
 ## Safety
 

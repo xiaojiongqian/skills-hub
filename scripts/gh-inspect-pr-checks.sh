@@ -2,4 +2,4 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-exec python3 "$repo_root/codex-skills/gh-fix-ci/scripts/inspect_pr_checks.py" "$@"
+exec python3 "$repo_root/skills/gh-fix-ci/scripts/inspect_pr_checks.py" "$@"

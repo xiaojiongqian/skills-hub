@@ -1,5 +1,7 @@
 ---
 name: chrome-mcp-remote
+version: 1.0.0
+license: MIT
 description: Use Chrome DevTools MCP via a manually launched Chrome (remote debugging). Use when Chrome MCP is unstable after macOS upgrades or when you need a reliable, fast MCP connection.
 metadata:
   short-description: Chrome MCP remote-debug workflow
@@ -14,11 +16,11 @@ This avoids macOS sandbox/permission issues and user-data-dir lock problems.
 
 1) Start the dedicated Chrome instance:
 
-```
-bash ~/.codex/skills/chrome-mcp-remote/scripts/start-chrome-mcp.sh
+```bash
+bash "<path-to-skill>/scripts/start-chrome-mcp.sh"
 ```
 
-2) Ensure Codex MCP points to the same port (default 9223). The global config should use:
+2) Ensure your Chrome DevTools MCP server points to the same port (default 9223). The config should use:
 
 ```
 --browserUrl http://127.0.0.1:9223
@@ -36,18 +38,18 @@ The script supports overrides:
 
 Example:
 
-```
-CHROME_MCP_PORT=9333 CHROME_MCP_PROFILE=/tmp/mcp-profile bash ~/.codex/skills/chrome-mcp-remote/scripts/start-chrome-mcp.sh
+```bash
+CHROME_MCP_PORT=9333 CHROME_MCP_PROFILE=/tmp/mcp-profile bash "<path-to-skill>/scripts/start-chrome-mcp.sh"
 ```
 
-If you change the port, update Codex MCP args to match.
+If you change the port, update your MCP server args to match.
 
 ## Login guidance
 
 For sites requiring authentication:
 
 - Prefer manual login in the MCP Chrome window. Cookies are stored in the dedicated profile dir.
-- If you must have Codex fill credentials, provide them explicitly for this session only; do not store secrets in files.
+- If you must have the agent fill credentials, provide them explicitly for this session only; do not store secrets in files.
 
 ## Troubleshooting (fast checks)
 

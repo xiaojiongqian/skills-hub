@@ -1,5 +1,7 @@
 ---
 name: auto-dev
+version: 1.0.0
+license: MIT
 description: >
   Autonomous development and debugging in the current worktree with strict git
   safety. Trigger when user says "go auto-dev" or asks to start auto-dev. Use
@@ -31,7 +33,8 @@ This skill is designed for reuse across projects. Keep business-specific behavio
 - Request needed credentials, test accounts, or session values (e.g., `app_session`, test account/password) via command input.
 - Do not persist secrets in files or commit history.
 
-## Scripts (in ~/.codex/skills/auto-dev/scripts)
+## Bundled scripts
+- Resolve the installed skill directory as `<path-to-skill>`, then run scripts from `<path-to-skill>/scripts/`.
 - `auto-dev-preflight.sh`: verify repo scope and branch safety; emits `AUTO_DEV_REPO_ROOT`, `AUTO_DEV_BRANCH`, and Chrome MCP readiness hints.
 - `auto-dev-deploy-dev.sh`: generic workflow trigger runner. It reads project-specific deploy mapping from `AUTO_DEV_INFER_SCRIPT` or `<repo>/.skills-hub/auto-dev/infer-targets.sh`.
 

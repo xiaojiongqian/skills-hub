@@ -1,5 +1,7 @@
 ---
 name: gh-fix-ci
+version: 1.0.0
+license: MIT
 description: Inspect GitHub PR checks with gh, pull failing GitHub Actions logs, summarize failure context, then create a fix plan and implement after user approval. Use when a user asks to debug or fix failing PR CI/CD checks on GitHub Actions and wants a plan + code changes; for external checks (e.g., Buildkite), only report the details URL and mark them out of scope.
 metadata:
   short-description: Fix failing Github CI actions
@@ -10,9 +12,8 @@ metadata:
 ## Overview
 
 Use gh to locate failing PR checks, fetch GitHub Actions logs for actionable failures, summarize the failure snippet, then propose a fix plan and implement after explicit approval.
-- Depends on the `plan` skill for drafting and approving the fix plan.
 
-Prereq: ensure `gh` is authenticated (for example, run `gh auth login` once), then run `gh auth status` with workflow/repo scopes so `gh` commands succeed. If sandboxing blocks `gh auth status`, rerun with elevated permissions.
+Prereq: ensure `gh` is authenticated (for example, run `gh auth login` once), then run `gh auth status` with workflow/repo scopes so `gh` commands succeed. If your agent or sandbox blocks network/auth access, grant it before continuing.
 
 ## Inputs
 
@@ -28,8 +29,8 @@ Prereq: ensure `gh` is authenticated (for example, run `gh auth login` once), th
 ## Workflow
 
 1. Verify gh authentication.
-   - Run `gh auth status` in the repo with escalated scopes (workflow/repo) after running `gh auth login`.
-   - If sandboxed auth status fails, rerun the command with elevated permissions to allow network/keyring access.
+   - Run `gh auth status` in the repo with workflow/repo scopes after running `gh auth login`.
+   - If auth status fails because of sandboxing or keychain access, rerun after granting the needed permissions.
    - If unauthenticated, ask the user to log in before proceeding.
 2. Resolve the PR.
    - Prefer the current branch PR: `gh pr view --json number,url`.
@@ -53,7 +54,7 @@ Prereq: ensure `gh` is authenticated (for example, run `gh auth login` once), th
    - Provide the failing check name, run URL (if any), and a concise log snippet.
    - Call out missing logs explicitly.
 6. Create a plan.
-   - Use the `plan` skill to draft a concise plan and request approval.
+   - Draft a concise fix plan and request approval before editing code.
 7. Implement after approval.
    - Apply the approved plan, summarize diffs/tests, and ask about opening a PR.
 8. Recheck status.

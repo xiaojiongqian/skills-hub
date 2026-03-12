@@ -12,8 +12,8 @@ usage() {
 Usage: scripts/link-local.sh [--codex-only] [--claude-only] [--install-claude-mcp]
 
 Options:
-  --codex-only   only link codex-skills to ~/.codex/skills
-  --claude-only  only link claude-skills / claude-commands to ~/.claude
+  --codex-only   only link skills/ to ~/.codex/skills
+  --claude-only  only link skills/ and claude-commands/ to ~/.claude
   --install-claude-mcp  run scripts/install-claude-mcp.sh after Claude linking
 USAGE
 }
@@ -47,7 +47,7 @@ done
 if [[ "$link_codex" == "true" ]]; then
   mkdir -p "$HOME/.codex/skills"
 
-  for skill_dir in "$repo_root"/codex-skills/*; do
+  for skill_dir in "$repo_root"/skills/*; do
     [[ -d "$skill_dir" ]] || continue
     skill_name="$(basename "$skill_dir")"
     ln -sfn "$skill_dir" "$HOME/.codex/skills/$skill_name"
@@ -60,11 +60,11 @@ if [[ "$link_claude" == "true" ]]; then
   mkdir -p "$HOME/.claude/commands"
   mkdir -p "$HOME/.claude/scripts"
 
-  for skill_file in "$repo_root"/claude-skills/*.md; do
-    [[ -f "$skill_file" ]] || continue
-    target="$HOME/.claude/skills/$(basename "$skill_file")"
-    ln -sfn "$skill_file" "$target"
-    echo "Linked Claude skill: $(basename "$skill_file")"
+  for skill_dir in "$repo_root"/skills/*; do
+    [[ -d "$skill_dir" ]] || continue
+    skill_name="$(basename "$skill_dir")"
+    ln -sfn "$skill_dir" "$HOME/.claude/skills/$skill_name"
+    echo "Linked Claude skill: $skill_name"
   done
 
   while IFS= read -r -d "" file; do

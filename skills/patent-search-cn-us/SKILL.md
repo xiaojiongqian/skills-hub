@@ -1,5 +1,7 @@
 ---
 name: patent-search-cn-us
+version: 1.0.0
+license: MIT
 description: Patent prior-art search and novelty check guidance focused on China and the United States (CNIPA, USPTO, Google Patents, WIPO). Use when asked to plan or run CN/US patent searches, draft search strategies, or produce a preliminary novelty search report.
 ---
 

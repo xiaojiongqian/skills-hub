@@ -1,5 +1,7 @@
 ---
 name: jina-web-fetch
+version: 1.0.0
+license: MIT
 description: Fetch webpage text with a normal HTTP request first, then automatically fall back to jina.ai proxy when direct access fails or returns login/JS-blocked content. Use when extracting content from X (Twitter) or other pages that are hard to read directly.
 ---
 
@@ -13,13 +15,13 @@ Use this skill to capture content from hard-to-fetch pages while keeping a deter
 ## Quick Start
 
 ```bash
-bash scripts/fetch_with_jina_fallback.sh "<url>" "<output_file>"
+bash "<path-to-skill>/scripts/fetch_with_jina_fallback.sh" "<url>" "<output_file>"
 ```
 
 Example:
 
 ```bash
-bash scripts/fetch_with_jina_fallback.sh \
+bash "<path-to-skill>/scripts/fetch_with_jina_fallback.sh" \
   "https://x.com/trq212/status/2027463795355095314" \
   "raw/x-status.txt"
 ```

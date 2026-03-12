@@ -1,49 +1,102 @@
 # skills-hub
 
-统一维护 **通用 skills**，避免把业务逻辑硬编码进 skill 本体。
-项目专属的脚本、配置和文档应放在各自项目的 `.claude/` 目录下维护，不在本仓库中管理。
+公开发布的通用技能仓库，采用 `skills/<name>/SKILL.md` 标准目录结构，目标是：
 
-## 设计原则
+1. 现有 skill 能被多种 agent 使用。
+2. 发布到 GitHub 后，别人可以直接运行 `npx skills add xiaojiongqian/skills-hub` 安装整仓技能。
+3. skill 更新后，使用者可以通过 `npx skills check` / `npx skills update` 快速同步。
 
-- 通用层（Core）：`codex-skills/`、`claude-skills/`、`claude-commands/` 只保留可复用流程与规则
-- 项目层（Project）：项目专属内容放在各自项目的 `.claude/` 目录下（如 `.claude/scripts/`、`.claude/references/`、`.claude/commands/`）
-- 示例层（Example）：`project-packs/example/` 提供项目扩展的模板和参考
+## 安装
 
-这样可以做到：
-- 技能可跨项目复用，通过 `~/.claude/` symlink 全局生效
-- 业务逻辑在各自项目内独立演进，不污染通用仓库
-- 新项目只需 `link-local.sh` 一次，即可使用全部通用能力
+整仓安装：
 
-## 能力定位（跨项目）
+```bash
+npx skills add xiaojiongqian/skills-hub
+```
 
-- `claude-commands/pr/merge.md`：通用 PR 合并流程（`/pr:merge`），不绑定具体业务仓库。
-- `codex-skills/auto-dev/` 与 `claude-skills/auto-dev.md`：通用自主开发流程（`auto-dev`），通过 project pack 注入项目差异。
+常用变体：
+
+```bash
+# 全局安装到用户级目录
+npx skills add xiaojiongqian/skills-hub -g
+
+# 仅安装指定 skill
+npx skills add xiaojiongqian/skills-hub --skill auto-dev
+
+# 先查看仓库中可安装的 skill
+npx skills add xiaojiongqian/skills-hub --list
+```
+
+## 更新
+
+仓库维护者只需要更新 `skills/` 下对应 skill 并推送到 GitHub：
+
+```bash
+git add skills README.md scripts
+git commit -m "Update skills"
+git push
+```
+
+使用者更新已安装技能：
+
+```bash
+npx skills check
+npx skills update
+```
+
+这就是当前推荐的快速更新机制，不需要重新手动 clone 或重新配置 agent 目录。
 
 ## 仓库结构
 
 ```text
 skills-hub/
-├── codex-skills/                  # Codex 通用技能（不放业务硬编码）
-├── claude-skills/                 # Claude 通用技能（不放业务硬编码）
-├── claude-commands/               # Claude commands（通用流程）
-├── project-packs/
-│   └── example/                   # 示例模板（供新项目参考）
-│       ├── auto-dev/infer-targets.sh
-│       └── PACK.md
-└── scripts/
-    ├── link-local.sh              # 将通用技能 symlink 到 ~/.claude/
-    ├── link-project-pack.sh       # 将 pack 注入目标仓库（可选）
-    ├── install-claude-mcp.sh
-    ├── start-chrome-mcp.sh
-    ├── auto-dev-preflight.sh
-    ├── auto-dev-deploy-dev.sh
-    ├── gh-fetch-comments.sh
-    └── gh-inspect-pr-checks.sh
+├── skills/                         # 标准 multi-skill 发布目录
+│   ├── auto-dev/
+│   │   ├── SKILL.md
+│   │   └── scripts/
+│   ├── chrome-mcp-remote/
+│   ├── firebase-gcp-debug/
+│   ├── gh-address-comments/
+│   ├── gh-fix-ci/
+│   ├── git-sync-dev-submodules/
+│   ├── jina-web-fetch/
+│   ├── patent-search-cn-us/
+│   └── playwright-mcp/
+├── claude-commands/                # 可选的 Claude command 辅助内容
+├── project-packs/                  # 项目专属扩展示例
+└── scripts/                        # 本仓库维护和本地兼容入口
 ```
 
-## 快速开始
+`skills/` 是唯一真源目录。每个技能都放在独立子目录内，并且至少包含：
 
-### 1) 克隆并链接本机技能
+- `SKILL.md`：YAML frontmatter + Markdown instructions
+- `scripts/`：需要一起分发的可执行脚本
+- `references/`：按需加载的参考资料
+- `agents/openai.yaml`：可选的 UI 元数据
+
+## 当前包含的 Skills
+
+- `auto-dev`
+- `chrome-mcp-remote`
+- `firebase-gcp-debug`
+- `gh-address-comments`
+- `gh-fix-ci`
+- `git-sync-dev-submodules`
+- `jina-web-fetch`
+- `patent-search-cn-us`
+- `playwright-mcp`
+
+## 发布规范
+
+- 公开仓库即可，安装入口使用 GitHub 仓库地址语义：`owner/repo`
+- 每个 skill 目录使用 `skills/<name>/SKILL.md`
+- `SKILL.md` 顶部保留 YAML frontmatter，至少包含 `name` 和 `description`
+- 本仓库统一补充了 `version` 和 `license`，便于发布和后续维护
+- skill 内引用脚本时，优先写成 `<path-to-skill>/scripts/...` 这种 agent 无关路径提示，不绑定 `~/.claude` 或 `~/.codex`
+
+## 本地开发
+
+如果你在本机直接维护这个仓库，可以继续使用本地链接脚本：
 
 ```bash
 git clone https://github.com/xiaojiongqian/skills-hub.git ~/skills-hub
@@ -51,66 +104,30 @@ cd ~/skills-hub
 bash scripts/link-local.sh
 ```
 
-### 2) 项目专属配置（在各自项目内）
+这个脚本会把 `skills/` 下的标准技能链接到本地 agent 目录，并继续保留 `claude-commands/` 和辅助脚本的本地使用方式。
 
-项目专属的脚本、参考文档和 command 放在项目自身的 `.claude/` 目录下：
+## 项目专属扩展
 
-```
+通用 skill 不应内置业务仓库信息。项目专属脚本、参考文档和映射规则，建议继续放在具体项目自己的目录中维护，例如：
+
+```text
 your-project/.claude/
-├── CLAUDE.md              # 项目开发规范
-├── commands/              # 项目专属 command（如有）
-├── skills/                # 项目专属 skill（如有）
-├── references/            # 项目参考文档
-├── settings.json          # 项目配置
-└── memories/              # agent 记忆
+├── CLAUDE.md
+├── commands/
+├── skills/
+├── references/
+└── settings.json
 ```
 
-通用的 commands 和 skills 通过 `~/.claude/` 的 symlink 自动加载，项目内不需要重复维护。
-
-### 3)（可选）使用 project pack 模板
-
-如果需要 CI/CD 部署映射等高级功能，可参考 `project-packs/example/` 模板：
+如果需要 project pack 模板，可参考 `project-packs/example/`，并使用：
 
 ```bash
-# 查看可用 pack
 bash scripts/link-project-pack.sh --list
-
-# 将 pack 注入目标仓库
 bash scripts/link-project-pack.sh --pack example --repo /path/to/target-repo
 ```
 
-## MCP 安装（Claude）
+## 维护建议
 
-```bash
-bash ~/.claude/scripts/install-claude-mcp.sh --scope user
-bash ~/.claude/scripts/start-chrome-mcp.sh
-claude mcp list
-```
-
-## 当前已同步的 Claude 通用技能
-
-- `auto-dev.md`
-- `firebase-gcp-debug.md`
-- `gh-address-comments.md`
-- `gh-fix-ci.md`
-- `chrome-mcp-remote.md`
-- `playwright-mcp.md`
-
-## 如何为项目添加专属配置
-
-项目专属内容直接放在项目自身的 `.claude/` 目录下：
-
-1. `CLAUDE.md` — 项目开发规范
-2. `commands/` — 项目专属 command（不与通用 command 同名）
-3. `skills/` — 项目专属 skill
-4. `references/` — 项目参考文档
-5. `settings.json` — 项目级配置
-
-通用能力通过 `~/.claude/` symlink 自动加载，无需在项目内重复维护。
-
-## 约束建议
-
-- 不在 core skill 里写业务模块名、业务目录结构、业务部署参数
-- 不在 core script 里写具体仓库 case 分支
-- 项目专属内容放在各自项目的 `.claude/` 目录下，不提交到 skills-hub
-- `project-packs/example/` 仅作为模板参考，不维护真实项目数据
+- 只在 `skills/` 下维护 skill 真源，不再新增平行的 agent 专属 skill 副本
+- skill 的业务差异放到项目侧，不硬编码进通用 skill
+- 每次修改后至少运行一次 `npx skills add xiaojiongqian/skills-hub --list` 或本地等价命令，确认仓库仍可被 CLI 识别

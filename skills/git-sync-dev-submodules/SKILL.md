@@ -1,8 +1,10 @@
 ---
 name: git-sync-dev-submodules
+version: 1.0.0
+license: MIT
 description: >
   Fast local dev sync for Git worktrees with optional submodule refresh. Use
-  when Codex needs to (1) update the current worktree branch onto the latest
+  when an agent needs to (1) update the current worktree branch onto the latest
   `origin/dev`, or (2) when run from a `dev` worktree, fast-forward `dev` and
   rebase every other clean worktree onto local `dev`. Refresh `func-core` by
   default and support `--skip-submodules` when submodules should be ignored.
@@ -48,16 +50,16 @@ description: >
 ## Common Commands
 ```bash
 # Sync only the current worktree and refresh func-core
-~/.codex/skills/git-sync-dev-submodules/scripts/sync-dev-to-current-branch.sh
+bash "<path-to-skill>/scripts/sync-dev-to-current-branch.sh"
 
 # Sync every worktree from a dev worktree and refresh func-core
-~/.codex/skills/git-sync-dev-submodules/scripts/sync-dev-worktrees.sh
+bash "<path-to-skill>/scripts/sync-dev-worktrees.sh"
 
 # Sync every worktree but skip submodules
-~/.codex/skills/git-sync-dev-submodules/scripts/sync-dev-worktrees.sh --skip-submodules
+bash "<path-to-skill>/scripts/sync-dev-worktrees.sh" --skip-submodules
 
 # Preview the current-worktree sync without changing git state
-~/.codex/skills/git-sync-dev-submodules/scripts/sync-dev-to-current-branch.sh --dry-run
+bash "<path-to-skill>/scripts/sync-dev-to-current-branch.sh" --dry-run
 ```
 
 ## Reporting
