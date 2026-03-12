@@ -1,6 +1,6 @@
 ---
 name: PR: Merge
-description: 自动处理 GitHub PR：review、解决冲突、合并到目标分支，使用 worktree 避免影响本地工作。
+description: 自动处理 GitHub PR：review、解决冲突、合并到目标分支。默认在当前目录操作并保留原分支。
 category: PR
 tags: [pr, merge, github, review]
 ---
