@@ -58,6 +58,7 @@ skills-hub/
 │   ├── firebase-gcp-debug/
 │   ├── gh-address-comments/
 │   ├── gh-fix-ci/
+│   ├── git-pr-merge/
 │   ├── git-sync-dev-submodules/
 │   ├── jina-web-fetch/
 │   ├── patent-search-cn-us/
@@ -74,6 +75,8 @@ skills-hub/
 - `references/`：按需加载的参考资料
 - `agents/openai.yaml`：可选的 UI 元数据
 
+`claude-commands/` 可以保留少量 Claude 专用 wrapper，例如 `pr:merge`，但实际流程逻辑应统一收敛到标准 skill 中。
+
 ## 当前包含的 Skills
 
 - `auto-dev`
@@ -81,6 +84,7 @@ skills-hub/
 - `firebase-gcp-debug`
 - `gh-address-comments`
 - `gh-fix-ci`
+- `git-pr-merge`
 - `git-sync-dev-submodules`
 - `jina-web-fetch`
 - `patent-search-cn-us`

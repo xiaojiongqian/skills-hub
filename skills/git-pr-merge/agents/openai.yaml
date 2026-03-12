@@ -1,0 +1,4 @@
+interface:
+  display_name: "Git PR Merge"
+  short_description: "Review, validate, and merge a GitHub pull request safely"
+  default_prompt: "Use $git-pr-merge to review a GitHub pull request, verify docs/tests and checks, handle simple conflicts, and merge it into the target branch when safe."
