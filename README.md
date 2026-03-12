@@ -63,7 +63,6 @@ skills-hub/
 │   ├── jina-web-fetch/
 │   ├── patent-search-cn-us/
 │   └── playwright-mcp/
-├── claude-commands/                # 可选的 Claude command 辅助内容
 ├── project-packs/                  # 项目专属扩展示例
 └── scripts/                        # 本仓库维护和本地兼容入口
 ```
@@ -74,8 +73,6 @@ skills-hub/
 - `scripts/`：需要一起分发的可执行脚本
 - `references/`：按需加载的参考资料
 - `agents/openai.yaml`：可选的 UI 元数据
-
-`claude-commands/` 可以保留少量 Claude 专用 wrapper，例如 `pr:merge`，但实际流程逻辑应统一收敛到标准 skill 中。
 
 ## 当前包含的 Skills
 
@@ -97,6 +94,7 @@ skills-hub/
 - `SKILL.md` 顶部保留 YAML frontmatter，至少包含 `name` 和 `description`
 - 本仓库统一补充了 `version` 和 `license`，便于发布和后续维护
 - skill 内引用脚本时，优先写成 `<path-to-skill>/scripts/...` 这种 agent 无关路径提示，不绑定 `~/.claude` 或 `~/.codex`
+- Claude Code 安装后直接使用标准 skill 名称，例如 `/git-pr-merge`
 
 ## 本地开发
 
@@ -108,7 +106,7 @@ cd ~/skills-hub
 bash scripts/link-local.sh
 ```
 
-这个脚本会把 `skills/` 下的标准技能链接到本地 agent 目录，并继续保留 `claude-commands/` 和辅助脚本的本地使用方式。
+这个脚本会把 `skills/` 下的标准技能链接到本地 agent 目录，并链接仓库里的辅助脚本。
 
 ## 项目专属扩展
 
@@ -134,4 +132,5 @@ bash scripts/link-project-pack.sh --pack example --repo /path/to/target-repo
 
 - 只在 `skills/` 下维护 skill 真源，不再新增平行的 agent 专属 skill 副本
 - skill 的业务差异放到项目侧，不硬编码进通用 skill
+- 对 Claude Code、Codex、Cursor 等 agent，一律复用同一套 `skills/` 内容，不再维护单独的 `claude-skills/` 或 `claude-commands/`
 - 每次修改后至少运行一次 `npx skills add xiaojiongqian/skills-hub --list` 或本地等价命令，确认仓库仍可被 CLI 识别

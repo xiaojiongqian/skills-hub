@@ -13,7 +13,7 @@ Usage: scripts/link-local.sh [--codex-only] [--claude-only] [--install-claude-mc
 
 Options:
   --codex-only   only link skills/ to ~/.codex/skills
-  --claude-only  only link skills/ and claude-commands/ to ~/.claude
+  --claude-only  only link skills/ and helper scripts to ~/.claude
   --install-claude-mcp  run scripts/install-claude-mcp.sh after Claude linking
 USAGE
 }
@@ -57,7 +57,6 @@ fi
 
 if [[ "$link_claude" == "true" ]]; then
   mkdir -p "$HOME/.claude/skills"
-  mkdir -p "$HOME/.claude/commands"
   mkdir -p "$HOME/.claude/scripts"
 
   for skill_dir in "$repo_root"/skills/*; do
@@ -66,14 +65,6 @@ if [[ "$link_claude" == "true" ]]; then
     ln -sfn "$skill_dir" "$HOME/.claude/skills/$skill_name"
     echo "Linked Claude skill: $skill_name"
   done
-
-  while IFS= read -r -d "" file; do
-    rel_path="${file#"$repo_root/claude-commands/"}"
-    target="$HOME/.claude/commands/$rel_path"
-    mkdir -p "$(dirname "$target")"
-    ln -sfn "$file" "$target"
-    echo "Linked Claude command: $rel_path"
-  done < <(find "$repo_root/claude-commands" -type f -name "*.md" -print0)
 
   for helper_script in "$repo_root"/scripts/*.sh; do
     [[ -f "$helper_script" ]] || continue
