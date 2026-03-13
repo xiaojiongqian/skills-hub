@@ -7,7 +7,7 @@ description: >
   autonomous review first; if blocking issues, unresolved conflicts, failed
   checks, or insufficient docs/tests are found, comment on the PR and stop
   instead of merging.
-version: 1.1.0
+version: 1.2.0
 license: MIT
 metadata:
   short-description: Review and merge a GitHub PR safely
@@ -17,32 +17,34 @@ metadata:
 
 ## Overview
 
-End-to-end pull request merge workflow: review the diff for quality, security, and docs/tests coverage, validate with local checks, handle simple conflicts automatically, merge, and clean up. Works with any GitHub-hosted repository regardless of language or branching model.
+End-to-end pull request merge workflow: review the diff for quality, security, and docs/tests coverage, validate locally on disposable branches or worktrees, finalize with `gh pr merge` when safe, and clean up. Default target is the PR base branch. `dev` may proceed autonomously; `main` requires human confirmation before the final merge.
 
 ## Quick start
 
 ```text
 Merge PR #123
-Merge PR #456 into main, squash, and delete the source branch
-Merge https://github.com/org/repo/pull/789 using a temporary worktree
+Merge PR #456 with squash and delete the source branch
+Review PR #789 targeting main; merge only after I confirm
 ```
 
 ## Inputs
 
 - `pr`: required. PR number, `#123`, or full PR URL.
-- `target_branch`: optional. Default `dev`. If the repo does not use `dev`, set explicitly.
+- `target_branch`: optional. Default the PR `baseRefName` from `gh pr view`. If provided and different from `baseRefName`, treat it as a non-standard target override; review and commenting may proceed, but do not autonomously merge unless a human explicitly confirms the alternate integration flow.
 - `merge_strategy`: optional. `merge` | `squash` | `rebase`. Default `merge`.
-- `delete_branch`: optional. Default `false`.
+- `delete_branch`: optional. Default `false`. Applies only when the GitHub merge succeeds and the source branch is not protected.
 - `use_worktree`: optional. Default `false`.
 
 ## Operating model
 
-- Execute the full flow autonomously once the user requests a merge.
-- Do not pause for routine confirmations during fetch, review, merge, test, push, cleanup, or PR comments.
-- Stop only when a required input is missing, access is unavailable, or a blocking issue means the PR must not be merged.
-- Never force-push.
+- Execute the full flow autonomously once the user requests a merge, except for protected-branch confirmation gates.
+- Use `gh pr merge` for the final standard merge so GitHub remains the source of truth for branch protection, merge queues, and merge state.
+- Do not pause for routine confirmations during fetch, review, validation, cleanup, or PR comments.
+- Stop only when a required input is missing, access is unavailable, a blocking issue is found, or a human confirmation gate is required.
+- Never force-push or manually rewrite target-branch history.
 - Never delete protected branches such as `main`, `master`, `dev`, or `develop`.
 - If the merge flow fails after review has started, leave a traceable PR comment and stop cleanly.
+- If the host is non-interactive and the target branch requires human confirmation, stop after review/comment and do not merge.
 
 ## Preconditions
 
@@ -53,12 +55,17 @@ Merge https://github.com/org/repo/pull/789 using a temporary worktree
 2. Verify GitHub CLI access:
    - `gh auth status`
 3. Resolve the PR and capture metadata:
-   - `gh pr view <pr> --json number,title,state,isDraft,headRefName,baseRefName,author,mergeable,commits,additions,deletions,body,url`
+   - `gh pr view <pr> --json number,title,state,isDraft,headRefName,headRefOid,baseRefName,author,mergeable,commits,additions,deletions,body,url`
    - `gh pr checks <pr>`
    - `gh pr diff <pr>`
 4. Determine the target branch:
    - If the user specified `target_branch`, use it.
-   - Otherwise default to `dev`.
+   - Otherwise default to `baseRefName`.
+   - If `target_branch != baseRefName`, record that the run is in non-standard target-override mode.
+5. Apply target-branch policy:
+   - If the target branch is `dev`, continue autonomously after review and validation.
+   - If the target branch is `main`, require explicit human confirmation immediately before the final merge.
+   - If the target branch is something else and the repo norm is unclear, prefer review/comment only instead of guessing.
 
 Do not continue if the PR is closed, already merged, inaccessible, or still in draft state.
 
@@ -83,12 +90,12 @@ If the host agent supports deeper review helpers or subagents, use them for medi
 
 ### Sub-agent delegation
 
-For medium and large PRs, delegate review and post-merge simplification to sub-agents for deeper analysis:
+For medium and large PRs, use sub-agents when available:
 
 - **Code review sub-agent**: Performs the detailed code quality, security, impact, and docs/tests review. Invoke after capturing the PR diff and metadata.
   - Claude: use the `code-reviewer` skill (or the Agent tool with a review prompt).
   - Other agents: use the bundled prompt at `<path-to-skill>/agents/code-reviewer.md` to spawn a sub-agent. Pass the PR diff and metadata as input.
-- **Code simplifier sub-agent**: Reviews the merged code for duplication, dead code, and unnecessary complexity. Invoke after a successful merge, before the final push.
+- **Code simplifier sub-agent**: Optional, non-blocking follow-up for duplication, dead code, and unnecessary complexity. Use only after the merge decision is already made, or after a review-only run when the user wants cleanup suggestions.
   - Claude: use the `simplify` skill (or the Agent tool with a simplification prompt).
   - Other agents: use the bundled prompt at `<path-to-skill>/agents/code-simplifier.md` to spawn a sub-agent. Pass the list of changed files and their post-merge content.
 
@@ -204,29 +211,44 @@ If worktree creation fails, either recover cleanly or fall back to default mode 
 
 ## Merge preparation
 
-1. Check out the PR branch:
+1. Check out the PR branch locally:
    - `gh pr checkout <pr>`
-2. Return to the target branch if needed.
-3. Test the merge without finalizing it yet (for `merge` strategy):
-   - `git merge --no-commit --no-ff <source_branch>`
+   - record `source_branch` from `headRefName`
+2. Create a disposable validation branch:
+   - for `merge` or `squash`:
+     - `git checkout -B pr-merge-<pr>-validate origin/<target_branch>`
+   - for `rebase`:
+     - `git checkout -B pr-merge-<pr>-rebase <source_branch>`
+3. Dry-run the integration without publishing it:
+   - `merge`: `git merge --no-commit --no-ff <source_branch>`
+   - `squash`: use the same local dry-run merge for conflict and regression detection: `git merge --no-commit --no-ff <source_branch>`
+   - `rebase`: `git rebase origin/<target_branch>`
+4. Run validation only on the disposable branch. Never rebase or merge directly on the real target branch during validation.
 
-If the merge applies cleanly, continue to validation.
+If the dry-run setup succeeds, continue to validation.
 
 ## Conflict handling
 
-The default behavior is to resolve conflicts automatically. Attempt resolution for all conflict types:
+Automatically resolve only conflicts that are clearly mechanical:
 
-- import list and dependency conflicts — combine both sides
-- formatting-only and comment-only conflicts — accept the incoming change
-- config file conflicts — merge both entries when semantically safe
-- logic conflicts — read both sides, understand intent from the PR description and surrounding code, and produce a correct resolution
+- import ordering or duplicated import blocks
+- formatting-only and comment-only conflicts
+- lockfile or dependency-manifest additions when both sides can be combined mechanically
+- simple config-list merges where both entries can safely coexist
 
 For each resolved conflict, record the file, the resolution strategy, and a brief rationale so it can be included in the post-merge comment.
 
-Only abort when a conflict is genuinely unresolvable — for example, two sides fundamentally contradict each other with no way to determine the correct behavior from available context. In that case:
+Do not auto-resolve:
 
-1. Abort the in-progress merge:
-   - `git merge --abort`
+- logic or control-flow conflicts
+- deletion-vs-modification conflicts
+- schema or API contract conflicts
+- ambiguous product-behavior conflicts
+
+If a non-mechanical conflict appears:
+
+1. Abort the in-progress validation state:
+   - `git merge --abort` or `git rebase --abort`
 2. Add a PR review comment listing each unresolved conflict with file paths and a description of why it cannot be auto-resolved.
 3. If the current user has permission, mark the PR back to draft:
    - `gh pr ready <pr> --undo`
@@ -255,56 +277,48 @@ If checks fail:
 
 1. capture the failing command and error
 2. comment on the PR with the failure summary
-3. abort or reset the merge state:
-   - `git merge --abort` or `git reset --hard HEAD`
-4. if the current user has permission, mark the PR back to draft
-5. stop without merging
+3. abort the validation state safely:
+   - `git merge --abort` if merge validation is active
+   - `git rebase --abort` if rebase validation is active
+4. clean up the disposable validation branch or worktree state
+5. if the current user has permission, mark the PR back to draft
+6. stop without merging
 
 ## Finalize merge
 
-When review and validation pass, finalize based on the chosen `merge_strategy`:
+Only execute the final merge when all of the following are true:
 
-### Strategy: merge (default)
+- review passed
+- validation passed
+- `target_branch == baseRefName`
+- the target-branch policy allows a merge
+- the PR head still matches the captured `headRefOid`
 
-```bash
-git merge --no-ff <source_branch> -m "Merge pull request #<pr> from <source_branch>
+If the target branch is `main`:
 
-<pr_title>
+- ask for explicit human confirmation immediately before running the final merge command
+- if the host is non-interactive, skip the merge and leave a review-only summary comment instead
 
-Auto-merged by git-pr-merge skill"
-```
+Use GitHub CLI to finalize the standard merge:
 
-### Strategy: squash
+- `merge`:
+  - `gh pr merge <pr> --merge --match-head-commit <head_sha>`
+- `squash`:
+  - `gh pr merge <pr> --squash --match-head-commit <head_sha>`
+- `rebase`:
+  - `gh pr merge <pr> --rebase --match-head-commit <head_sha>`
 
-```bash
-git merge --squash <source_branch>
-git commit -m "<pr_title> (#<pr>)
+If `delete_branch=true` and the source branch is not protected, add `--delete-branch`.
 
-Auto-merged by git-pr-merge skill"
-```
+This keeps GitHub merge state, merge queues, and branch protections authoritative.
 
-### Strategy: rebase
+If `target_branch != baseRefName`, do not run `gh pr merge`. Leave a summary comment with the review and validation outcome, state that the PR was not merged on GitHub, and require explicit human follow-up for the alternate target flow.
 
-```bash
-git rebase <source_branch>
-```
+After the merge command, verify the result:
 
-Note: rebase rewrites history on the target branch. Use only when the team convention expects it.
-
-After committing:
-
-1. Push the target branch:
-
-```bash
-git push origin <target_branch>
-```
-
-2. Verify the merge was recognized by GitHub:
-   - `gh pr view <pr> --json state,merged`
-   - If the PR state is not `MERGED`, the push did not close the PR automatically. In that case, report the discrepancy to the user and suggest manually closing or re-targeting the PR.
-
-3. Verify the commit:
-   - `git log origin/<target_branch> -1`
+- `gh pr view <pr> --json state,merged,mergeCommit`
+- `git fetch origin <target_branch>`
+- `git log origin/<target_branch> -1`
 
 ## Post-merge PR comment
 
@@ -317,6 +331,7 @@ Use a comment shape like:
 
 **PR**: #<number> <title>
 **Source → Target**: `<source_branch>` → `<target_branch>`
+**Mode**: <standard-merge|review-only|target-override>
 **Strategy**: <merge|squash|rebase>
 **Merge commit**: `<sha>` (or "N/A" if not merged)
 
@@ -348,13 +363,7 @@ Omit sections that are entirely empty or not applicable, but never omit Review, 
 
 ## Branch cleanup
 
-Delete the source branch only if `delete_branch=true` and it is not a protected branch.
-
-Typical command:
-
-```bash
-git push origin --delete <source_branch>
-```
+Delete the source branch only when the GitHub merge succeeds, `delete_branch=true`, and the branch is not protected. Prefer `gh pr merge --delete-branch` over manual remote deletion so GitHub remains the source of truth.
 
 Never delete `main`, `master`, `dev`, or `develop`.
 
@@ -369,6 +378,7 @@ At the end:
   - If removal fails (e.g., uncommitted files), force-remove with `git worktree remove --force "$temp_dir"` since the worktree is purely temporary and any useful state has already been pushed.
 - Restore the original working directory.
 - Switch back to the branch that was checked out before the merge flow started.
+- Delete disposable validation branches such as `pr-merge-<pr>-validate` or `pr-merge-<pr>-rebase`.
 - Pop the auto stash if one was created:
   - `git stash pop`
 
@@ -392,4 +402,4 @@ Report:
 
 - `agents/openai.yaml` — OpenAI-compatible agent UI metadata
 - `agents/code-reviewer.md` — Sub-agent prompt for code review (used by non-Claude agents)
-- `agents/code-simplifier.md` — Sub-agent prompt for post-merge simplification (used by non-Claude agents)
+- `agents/code-simplifier.md` — Optional, non-blocking prompt for post-merge or review-only simplification follow-up

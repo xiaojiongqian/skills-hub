@@ -1,4 +1,4 @@
 interface:
   display_name: "Git PR Merge"
   short_description: "Review, validate, and merge a GitHub pull request safely"
-  default_prompt: "Use git-pr-merge to review a GitHub pull request, verify docs/tests and checks, handle simple conflicts, and merge it into the target branch when safe. Supports merge, squash, and rebase strategies."
+  default_prompt: "Use git-pr-merge to review a GitHub pull request, validate it locally, and merge it into its base branch with gh pr merge when safe. `dev` may proceed autonomously; `main` requires human confirmation. Supports merge, squash, and rebase strategies."
