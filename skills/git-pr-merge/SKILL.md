@@ -1,7 +1,13 @@
 ---
 name: git-pr-merge
-description: Review, validate, and merge a GitHub pull request into a target branch with `gh` and `git`. Use when the user asks to merge a PR end-to-end, optionally delete the source branch, and optionally use a temporary worktree. Run autonomous review first; if blocking issues, unresolved conflicts, failed checks, or insufficient docs/tests are found, comment on the PR and stop instead of merging.
-version: 1.0.0
+description: >
+  Review, validate, and merge a GitHub pull request into a target branch with
+  `gh` and `git`. Use when the user asks to merge a PR end-to-end, optionally
+  delete the source branch, and optionally use a temporary worktree. Run
+  autonomous review first; if blocking issues, unresolved conflicts, failed
+  checks, or insufficient docs/tests are found, comment on the PR and stop
+  instead of merging.
+version: 1.1.0
 license: MIT
 metadata:
   short-description: Review and merge a GitHub PR safely
@@ -9,16 +15,25 @@ metadata:
 
 # Git PR Merge
 
-Use this skill to handle a pull request from review through merge in a repository-agnostic way.
+## Overview
+
+End-to-end pull request merge workflow: review the diff for quality, security, and docs/tests coverage, validate with local checks, handle simple conflicts automatically, merge, and clean up. Works with any GitHub-hosted repository regardless of language or branching model.
+
+## Quick start
+
+```text
+Merge PR #123
+Merge PR #456 into main, squash, and delete the source branch
+Merge https://github.com/org/repo/pull/789 using a temporary worktree
+```
 
 ## Inputs
 
 - `pr`: required. PR number, `#123`, or full PR URL.
-- `target_branch`: optional. Default `dev`.
+- `target_branch`: optional. Default `dev`. If the repo does not use `dev`, set explicitly.
+- `merge_strategy`: optional. `merge` | `squash` | `rebase`. Default `merge`.
 - `delete_branch`: optional. Default `false`.
 - `use_worktree`: optional. Default `false`.
-
-If the repo does not use `dev`, set `target_branch` explicitly.
 
 ## Operating model
 
@@ -41,6 +56,9 @@ If the repo does not use `dev`, set `target_branch` explicitly.
    - `gh pr view <pr> --json number,title,state,isDraft,headRefName,baseRefName,author,mergeable,commits,additions,deletions,body,url`
    - `gh pr checks <pr>`
    - `gh pr diff <pr>`
+4. Determine the target branch:
+   - If the user specified `target_branch`, use it.
+   - Otherwise default to `dev`.
 
 Do not continue if the PR is closed, already merged, inaccessible, or still in draft state.
 
@@ -62,6 +80,19 @@ Always perform:
 - impact and regression review
 
 If the host agent supports deeper review helpers or subagents, use them for medium and large PRs. If not, perform the review manually.
+
+### Sub-agent delegation
+
+For medium and large PRs, delegate review and post-merge simplification to sub-agents for deeper analysis:
+
+- **Code review sub-agent**: Performs the detailed code quality, security, impact, and docs/tests review. Invoke after capturing the PR diff and metadata.
+  - Claude: use the `code-reviewer` skill (or the Agent tool with a review prompt).
+  - Other agents: use the bundled prompt at `<path-to-skill>/agents/code-reviewer.md` to spawn a sub-agent. Pass the PR diff and metadata as input.
+- **Code simplifier sub-agent**: Reviews the merged code for duplication, dead code, and unnecessary complexity. Invoke after a successful merge, before the final push.
+  - Claude: use the `simplify` skill (or the Agent tool with a simplification prompt).
+  - Other agents: use the bundled prompt at `<path-to-skill>/agents/code-simplifier.md` to spawn a sub-agent. Pass the list of changed files and their post-merge content.
+
+For small PRs, sub-agent delegation is optional — inline review is sufficient.
 
 ### Required review checks
 
@@ -103,8 +134,9 @@ If review finds blocking issues, do all of the following:
    - the blocking problem
    - affected files or lines
    - concrete fixes needed
-2. If appropriate for the repo workflow, run:
+2. If the current user has permission and the repo workflow uses draft PRs, mark the PR back to draft:
    - `gh pr ready <pr> --undo`
+   - Skip this step if the current user is not the PR author and does not have maintainer access.
 3. Stop without merging.
 
 Use a comment shape like:
@@ -112,13 +144,24 @@ Use a comment shape like:
 ```text
 ## PR merge blocked
 
-- Blocking issues:
-  - ...
-- Docs/tests gaps:
-  - ...
-- Next actions:
-  1. ...
-  2. ...
+**PR**: #<number> <title>
+**Source → Target**: `<source_branch>` → `<target_branch>`
+**Review mode**: <Small|Medium|Large> (<N> lines changed)
+
+### Blocking issues
+| # | File | Line(s) | Severity | Description |
+|---|------|---------|----------|-------------|
+| 1 | path/to/file | L42-L50 | critical | description |
+
+### Docs/tests gaps
+- <description, or "None">
+
+### Conflict status
+- <clean / N conflicts auto-resolved / N conflicts unresolvable — details>
+
+### Next actions
+1. specific fix instruction
+2. ...
 ```
 
 ## Workspace preparation
@@ -164,28 +207,30 @@ If worktree creation fails, either recover cleanly or fall back to default mode 
 1. Check out the PR branch:
    - `gh pr checkout <pr>`
 2. Return to the target branch if needed.
-3. Test the merge without finalizing it yet:
+3. Test the merge without finalizing it yet (for `merge` strategy):
    - `git merge --no-commit --no-ff <source_branch>`
 
 If the merge applies cleanly, continue to validation.
 
 ## Conflict handling
 
-Automatically resolve only conflicts that are clearly mechanical:
+The default behavior is to resolve conflicts automatically. Attempt resolution for all conflict types:
 
-- import list conflicts
-- formatting-only conflicts
-- comment-only conflicts
-- simple config merges where both sides can be safely combined
+- import list and dependency conflicts — combine both sides
+- formatting-only and comment-only conflicts — accept the incoming change
+- config file conflicts — merge both entries when semantically safe
+- logic conflicts — read both sides, understand intent from the PR description and surrounding code, and produce a correct resolution
 
-Do not auto-resolve complex logic conflicts, deletion-vs-modification conflicts, or behaviorally ambiguous merges.
+For each resolved conflict, record the file, the resolution strategy, and a brief rationale so it can be included in the post-merge comment.
 
-If conflicts are too complex:
+Only abort when a conflict is genuinely unresolvable — for example, two sides fundamentally contradict each other with no way to determine the correct behavior from available context. In that case:
 
-1. add a PR review comment summarizing the unresolved conflict
-2. abort or reset the in-progress merge
-3. optionally mark the PR back to draft
-4. stop without merging
+1. Abort the in-progress merge:
+   - `git merge --abort`
+2. Add a PR review comment listing each unresolved conflict with file paths and a description of why it cannot be auto-resolved.
+3. If the current user has permission, mark the PR back to draft:
+   - `gh pr ready <pr> --undo`
+4. Stop without merging.
 
 ## Validation before merge
 
@@ -200,55 +245,106 @@ Preferred order:
 Detect commands from the project when possible:
 
 - Node: `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:unit`
-- Python: `pytest`
-- Go: `go test ./...`
-- Rust: `cargo test`
+- Python: `ruff check .` or `flake8`, `mypy`, `pytest`
+- Go: `go vet ./...`, `go test ./...`
+- Rust: `cargo clippy`, `cargo test`
+
+For monorepos or multi-package projects, prefer running checks only for affected packages or workspaces rather than the entire project. Look for workspace-level scripts (e.g., `nx affected`, `turbo run test --filter=...`, `pnpm --filter`).
 
 If checks fail:
 
 1. capture the failing command and error
 2. comment on the PR with the failure summary
-3. abort or reset the merge state
-4. optionally mark the PR back to draft
+3. abort or reset the merge state:
+   - `git merge --abort` or `git reset --hard HEAD`
+4. if the current user has permission, mark the PR back to draft
 5. stop without merging
 
 ## Finalize merge
 
-When review and validation pass:
+When review and validation pass, finalize based on the chosen `merge_strategy`:
 
-1. Commit the merge if needed:
+### Strategy: merge (default)
 
 ```bash
-git commit -m "Merge pull request #<pr> from <source_branch>
+git merge --no-ff <source_branch> -m "Merge pull request #<pr> from <source_branch>
 
 <pr_title>
 
 Auto-merged by git-pr-merge skill"
 ```
 
-2. Push the target branch:
+### Strategy: squash
+
+```bash
+git merge --squash <source_branch>
+git commit -m "<pr_title> (#<pr>)
+
+Auto-merged by git-pr-merge skill"
+```
+
+### Strategy: rebase
+
+```bash
+git rebase <source_branch>
+```
+
+Note: rebase rewrites history on the target branch. Use only when the team convention expects it.
+
+After committing:
+
+1. Push the target branch:
 
 ```bash
 git push origin <target_branch>
 ```
 
-3. Verify the result:
-   - `git log origin/<target_branch> -1`
+2. Verify the merge was recognized by GitHub:
    - `gh pr view <pr> --json state,merged`
+   - If the PR state is not `MERGED`, the push did not close the PR automatically. In that case, report the discrepancy to the user and suggest manually closing or re-targeting the PR.
+
+3. Verify the commit:
+   - `git log origin/<target_branch> -1`
 
 ## Post-merge PR comment
 
-Add a summary comment to the PR conversation with:
+Add a summary comment to the PR conversation regardless of whether the merge succeeded or failed. The comment must be clear, concise, and information-dense — no filler, every line carries signal.
 
-- target branch
-- merge commit SHA
-- whether conflicts occurred
-- review outcome
-- validation outcome
-- any historical issues tracked separately
-- whether the source branch was deleted
+Use a comment shape like:
 
-Keep it concise and traceable.
+```text
+## PR merge <result>
+
+**PR**: #<number> <title>
+**Source → Target**: `<source_branch>` → `<target_branch>`
+**Strategy**: <merge|squash|rebase>
+**Merge commit**: `<sha>` (or "N/A" if not merged)
+
+### Review
+- Mode: <Small|Medium|Large> (<N> lines changed)
+- Verdict: <PASS|BLOCK>
+- Findings: <one-line summary, or "No issues">
+
+### Docs/tests
+- Policy: <Strict|Update|Consistency>
+- Adequate: <yes|no — brief reason if no>
+
+### Validation
+- Commands run: `<cmd1>`, `<cmd2>`
+- Result: <all passed | failed — command and error>
+
+### Conflicts
+- <None | N conflicts resolved (list files) | Unresolvable — aborted>
+
+### Cleanup
+- Source branch: <deleted|retained>
+- Worktree: <removed|N/A>
+
+### Follow-up
+- <historical issues, linked GitHub issues, or "None">
+```
+
+Omit sections that are entirely empty or not applicable, but never omit Review, Validation, or the merge result.
 
 ## Branch cleanup
 
@@ -264,14 +360,19 @@ Never delete `main`, `master`, `dev`, or `develop`.
 
 ## Cleanup
 
+This skill is responsible for cleaning up resources it created during the merge flow. The source branch is not a resource created by this skill — its lifecycle is controlled by the `delete_branch` input, not by cleanup.
+
 At the end:
 
-- remove the temporary worktree if one was used
-- restore the original directory
-- switch back to the original branch when appropriate
-- pop the auto stash if one was created
+- If a temporary worktree was created, always remove it:
+  - `git worktree remove "$temp_dir"`
+  - If removal fails (e.g., uncommitted files), force-remove with `git worktree remove --force "$temp_dir"` since the worktree is purely temporary and any useful state has already been pushed.
+- Restore the original working directory.
+- Switch back to the branch that was checked out before the merge flow started.
+- Pop the auto stash if one was created:
+  - `git stash pop`
 
-If cleanup partially fails, report the remaining manual cleanup steps clearly.
+If stash pop fails due to conflicts, warn the user and leave the stash intact for manual resolution.
 
 ## Final report
 
@@ -279,6 +380,7 @@ Report:
 
 - PR number and title
 - source and target branches
+- merge strategy used
 - review result
 - docs/tests assessment
 - validation commands run
@@ -286,8 +388,8 @@ Report:
 - cleanup result
 - any follow-up items
 
-## Examples
+## Bundled resources
 
-- `Merge PR #123 into dev`
-- `Merge https://github.com/org/repo/pull/456 into main and delete the source branch`
-- `Use git-pr-merge for PR 789 with a temporary worktree`
+- `agents/openai.yaml` — OpenAI-compatible agent UI metadata
+- `agents/code-reviewer.md` — Sub-agent prompt for code review (used by non-Claude agents)
+- `agents/code-simplifier.md` — Sub-agent prompt for post-merge simplification (used by non-Claude agents)
