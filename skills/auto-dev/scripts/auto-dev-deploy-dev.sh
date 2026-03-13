@@ -8,11 +8,12 @@ usage() {
 Usage: auto-dev-deploy-dev.sh [options]
 
 Options:
-  --wait                       wait for the latest workflow run to finish
+  --wait                       wait for the dispatched workflow run to finish
   --timeout <seconds>          watch timeout when --wait is enabled (default: 900)
   --dry-run                    print gh workflow command without running it
   --force-all                  tell inference layer to deploy all relevant targets
   --setup-cloud-tasks          request setup_cloud_tasks=true when supported
+  --diff-base <ref>            git ref used to compute changed files (default: origin/main or origin/HEAD)
   --infer-script <path>        path to project-specific target inference script
   --workflow <name>            workflow file name (default: dev.yml)
   --set <key=value>            add/override workflow input (repeatable)
@@ -26,7 +27,13 @@ dry_run=false
 force_all=false
 setup_cloud_tasks=false
 infer_script="${AUTO_DEV_INFER_SCRIPT:-}"
-workflow="${AUTO_DEV_WORKFLOW:-dev.yml}"
+diff_base="${AUTO_DEV_DIFF_BASE:-}"
+workflow="dev.yml"
+workflow_locked=false
+if [[ -n "${AUTO_DEV_WORKFLOW:-}" ]]; then
+  workflow="${AUTO_DEV_WORKFLOW}"
+  workflow_locked=true
+fi
 manual_inputs=()
 
 while [[ $# -gt 0 ]]; do
@@ -47,12 +54,17 @@ while [[ $# -gt 0 ]]; do
     --setup-cloud-tasks)
       setup_cloud_tasks=true
       ;;
+    --diff-base)
+      diff_base="$2"
+      shift
+      ;;
     --infer-script)
       infer_script="$2"
       shift
       ;;
     --workflow)
       workflow="$2"
+      workflow_locked=true
       shift
       ;;
     --set)
@@ -89,27 +101,67 @@ if ! gh auth status >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! git rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then
+if ! git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
   echo "No upstream configured. Push the current branch first:" >&2
   echo "  git push -u origin $AUTO_DEV_BRANCH" >&2
   exit 1
 fi
 
+upstream_ref="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')"
+expected_upstream="origin/$AUTO_DEV_BRANCH"
+if [[ "$upstream_ref" != "$expected_upstream" ]]; then
+  echo "Deploy safety check failed: current branch must track $expected_upstream, found $upstream_ref." >&2
+  echo "Set the upstream to origin/$AUTO_DEV_BRANCH before dispatching workflows for this branch." >&2
+  exit 1
+fi
+
+deploy_ref="$upstream_ref"
+deploy_sha="$(git rev-parse "$deploy_ref")"
+
+ahead_count=0
+behind_count=0
+read -r ahead_count behind_count < <(git rev-list --left-right --count HEAD..."$deploy_ref")
+if (( ahead_count > 0 || behind_count > 0 )); then
+  echo "Warning: local branch differs from $deploy_ref (ahead $ahead_count, behind $behind_count); deploy inference and workflow dispatch use the remote ref only." >&2
+fi
+
+resolve_diff_base() {
+  local origin_head_ref
+
+  if [[ -n "$diff_base" ]]; then
+    if git rev-parse --verify "${diff_base}^{commit}" >/dev/null 2>&1; then
+      printf '%s\n' "$diff_base"
+      return 0
+    fi
+
+    echo "Diff base not found: $diff_base" >&2
+    return 1
+  fi
+
+  if git rev-parse --verify "origin/main^{commit}" >/dev/null 2>&1; then
+    printf 'origin/main\n'
+    return 0
+  fi
+
+  if origin_head_ref="$(git symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null)"; then
+    origin_head_ref="${origin_head_ref#refs/remotes/}"
+    if git rev-parse --verify "${origin_head_ref}^{commit}" >/dev/null 2>&1; then
+      printf '%s\n' "$origin_head_ref"
+      return 0
+    fi
+  fi
+
+  echo "Unable to resolve a diff base. Pass --diff-base or set AUTO_DEV_DIFF_BASE." >&2
+  return 1
+}
+
+diff_base="$(resolve_diff_base)"
+diff_merge_base="$(git merge-base "$diff_base" "$deploy_ref")"
+
 get_changed_files() {
-  local upstream
   local base
-  if upstream="$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null)"; then
-    base="$(git merge-base HEAD "$upstream")"
-    git diff --name-only "$base" HEAD
-    return
-  fi
-
-  if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
-    git diff --name-only HEAD~1 HEAD
-    return
-  fi
-
-  git diff --name-only
+  base="$diff_merge_base"
+  git diff --name-only "$base" "$deploy_ref"
 }
 
 changed_files=()
@@ -141,7 +193,7 @@ set_input() {
     pair="${input_pairs[$i]}"
     existing_key="${pair%%=*}"
     if [[ "$existing_key" == "$key" ]]; then
-      input_pairs[$i]="$key=$value"
+      input_pairs[i]="$key=$value"
       return
     fi
   done
@@ -195,6 +247,10 @@ if [[ -n "$infer_script" ]]; then
   infer_output="$({
     AUTO_DEV_FORCE_ALL=$([[ "$force_all" == "true" ]] && echo 1 || echo 0) \
     AUTO_DEV_SETUP_CLOUD_TASKS=$([[ "$setup_cloud_tasks" == "true" ]] && echo 1 || echo 0) \
+    AUTO_DEV_DEPLOY_REF="$deploy_ref" \
+    AUTO_DEV_DEPLOY_SHA="$deploy_sha" \
+    AUTO_DEV_DIFF_BASE="$diff_base" \
+    AUTO_DEV_DIFF_MERGE_BASE="$diff_merge_base" \
     "$infer_script" < "$changed_tmp"
   })"
 
@@ -204,7 +260,11 @@ if [[ -n "$infer_script" ]]; then
     [[ "${line:0:1}" == "#" ]] && continue
 
     if [[ "$line" == workflow=* ]]; then
-      workflow="${line#workflow=}"
+      if [[ "$workflow_locked" == "true" ]]; then
+        echo "Ignoring infer workflow override because the workflow was set explicitly: ${line#workflow=}" >&2
+      else
+        workflow="${line#workflow=}"
+      fi
       continue
     fi
 
@@ -246,10 +306,37 @@ if (( ${#input_pairs[@]} == 0 )); then
 fi
 
 printf 'Workflow: %s\n' "$workflow"
+printf 'Deploy ref: %s (%s)\n' "$deploy_ref" "$deploy_sha"
+printf 'Diff base: %s\n' "$diff_base"
 printf 'Deploy inputs:\n'
 for pair in "${input_pairs[@]}"; do
   printf '  %s\n' "$pair"
 done
+
+contains_line() {
+  local needle="$1"
+  local haystack="$2"
+  local line
+
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    if [[ "$line" == "$needle" ]]; then
+      return 0
+    fi
+  done <<<"$haystack"
+
+  return 1
+}
+
+list_matching_run_ids() {
+  gh run list \
+    --workflow "$workflow" \
+    --branch "$AUTO_DEV_BRANCH" \
+    --event workflow_dispatch \
+    --limit 50 \
+    --json databaseId,headSha \
+    --jq ".[] | select(.headSha == \"$deploy_sha\") | .databaseId"
+}
 
 cmd=(
   gh workflow run "$workflow"
@@ -258,6 +345,11 @@ cmd=(
 for pair in "${input_pairs[@]}"; do
   cmd+=( -f "$pair" )
 done
+
+previous_run_ids=""
+if [[ "$wait_for_run" == "true" ]]; then
+  previous_run_ids="$(list_matching_run_ids || true)"
+fi
 
 if [[ "$dry_run" == "true" ]]; then
   printf 'Dry run command:\n'
@@ -269,17 +361,37 @@ fi
 "${cmd[@]}"
 
 if [[ "$wait_for_run" == "true" ]]; then
-  sleep 3
-  run_id="$(gh run list --workflow "$workflow" --branch "$AUTO_DEV_BRANCH" --limit 1 --json databaseId --jq '.[0].databaseId')"
+  watch_deadline=$((SECONDS + timeout_seconds))
+  run_id=""
+
+  # Match on a new workflow_dispatch run for the dispatched commit instead of the latest run on the branch.
+  while (( SECONDS < watch_deadline )); do
+    candidate_run_ids="$(list_matching_run_ids || true)"
+    while IFS= read -r candidate_run_id; do
+      [[ -z "$candidate_run_id" ]] && continue
+      if ! contains_line "$candidate_run_id" "$previous_run_ids"; then
+        run_id="$candidate_run_id"
+        break 2
+      fi
+    done <<<"$candidate_run_ids"
+    sleep 3
+  done
+
   if [[ -z "$run_id" || "$run_id" == "null" ]]; then
     echo "Unable to find the workflow run to watch." >&2
     exit 1
   fi
 
+  remaining_timeout=$((watch_deadline - SECONDS))
+  if (( remaining_timeout <= 0 )); then
+    echo "Timed out before the workflow run became available to watch." >&2
+    exit 1
+  fi
+
   if command -v timeout >/dev/null 2>&1; then
-    timeout "$timeout_seconds" gh run watch "$run_id" --interval 10 --exit-status
+    timeout "$remaining_timeout" gh run watch "$run_id" --interval 10 --exit-status
   elif command -v gtimeout >/dev/null 2>&1; then
-    gtimeout "$timeout_seconds" gh run watch "$run_id" --interval 10 --exit-status
+    gtimeout "$remaining_timeout" gh run watch "$run_id" --interval 10 --exit-status
   else
     gh run watch "$run_id" --interval 10 --exit-status
   fi

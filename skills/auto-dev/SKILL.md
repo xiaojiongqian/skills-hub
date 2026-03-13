@@ -1,6 +1,5 @@
 ---
 name: auto-dev
-version: 1.0.0
 license: MIT
 description: >
   Autonomous development and debugging in the current worktree with strict git
@@ -24,8 +23,10 @@ This skill is designed for reuse across projects. Keep business-specific behavio
 - Never checkout, merge, rebase, or push `dev` or `main` by default.
 - Never push to any remote branch other than the current branch name by default.
 - Never force-push or rewrite remote history.
+- For GitHub Actions deploys, require the branch to track `origin/<current-branch>`; infer deploy targets from the remote branch state, not unpushed local commits.
 - `skills-hub` exception (explicit user request only):
   - Allow operating on `main` only in the `skills-hub` repo.
+  - Treat explicit confirmation as part of the protected command invocation, using `AUTO_DEV_ALLOW_SKILLS_HUB_MAIN=skills-hub-main-confirmed`.
   - Allow commit/push to `origin/main` only after task completion and explicit confirmation.
   - Keep all other protections unchanged.
 
@@ -37,6 +38,9 @@ This skill is designed for reuse across projects. Keep business-specific behavio
 - Resolve the installed skill directory as `<path-to-skill>`, then run scripts from `<path-to-skill>/scripts/`.
 - `auto-dev-preflight.sh`: verify repo scope and branch safety; emits `AUTO_DEV_REPO_ROOT`, `AUTO_DEV_BRANCH`, and Chrome MCP readiness hints.
 - `auto-dev-deploy-dev.sh`: generic workflow trigger runner. It reads project-specific deploy mapping from `AUTO_DEV_INFER_SCRIPT` or `<repo>/.skills-hub/auto-dev/infer-targets.sh`.
+  - The infer script reads changed files on `stdin`.
+  - It may emit `workflow=<workflow-file>` and `input:<key>=<value>` lines.
+  - The deploy script provides `AUTO_DEV_DEPLOY_REF`, `AUTO_DEV_DEPLOY_SHA`, `AUTO_DEV_DIFF_BASE`, and `AUTO_DEV_DIFF_MERGE_BASE` to the infer script.
 
 ## Project-specific logic (keep out of core skill)
 - Store business mapping, deployment knobs, and repo shortcuts in a project pack (for example `project-packs/<project>/...`).
@@ -45,7 +49,7 @@ This skill is designed for reuse across projects. Keep business-specific behavio
 ## Browser automation preference
 - Default MCP for browser work: **chrome-devtools-mcp** (fast, reliable).
   - If `AUTO_DEV_CHROME_MCP_READY=1`, use Chrome MCP immediately.
-  - If not ready, run `chrome-mcp-remote` start script and re-check quickly.
+  - If not ready, use a repo-local Chrome helper only when the project already provides one; otherwise fall back directly to Playwright.
 - Fallback MCP: **playwright-mcp** when chrome-devtools is unavailable or for cross-browser checks.
   - Playwright supports Chromium/Firefox/WebKit (Safari-like engine on macOS). If the user needs the actual Safari app, ask for clarification.
 
@@ -60,6 +64,9 @@ This skill is designed for reuse across projects. Keep business-specific behavio
 
 ## GitHub Actions deploy (current branch only)
 - Trigger workflows with the current branch ref, e.g., `gh workflow run dev.yml --ref <current-branch>`.
+- Use the remote branch state as the source of truth for deploy inference; warn when local `HEAD` differs from `origin/<current-branch>`.
+- Default diff base is `origin/main` when available, otherwise resolve `origin/HEAD`; require `--diff-base` or `AUTO_DEV_DIFF_BASE` only when neither exists.
+- Treat `--workflow` and `AUTO_DEV_WORKFLOW` as explicit overrides; do not let the infer script silently replace them.
 - Confirm the workflow targets the dev environment for the current branch only.
 
 ## Reporting

@@ -16,11 +16,16 @@ if [[ "$current_branch" == "HEAD" ]]; then
 fi
 
 repo_name="$(basename "$repo_root")"
-allow_skills_hub_main="${AUTO_DEV_ALLOW_SKILLS_HUB_MAIN:-0}"
+allow_skills_hub_main="${AUTO_DEV_ALLOW_SKILLS_HUB_MAIN:-}"
+skills_hub_main_token="skills-hub-main-confirmed"
 if [[ "$current_branch" == "dev" || "$current_branch" == "main" ]]; then
-  if [[ "$current_branch" == "main" && "$repo_name" == "skills-hub" && "$allow_skills_hub_main" == "1" ]]; then
-    echo "Warning: allowing skills-hub main by explicit override (AUTO_DEV_ALLOW_SKILLS_HUB_MAIN=1)." >&2
+  if [[ "$current_branch" == "main" && "$repo_name" == "skills-hub" && "$allow_skills_hub_main" == "$skills_hub_main_token" ]]; then
+    echo "Warning: allowing skills-hub main by explicit override (AUTO_DEV_ALLOW_SKILLS_HUB_MAIN=$skills_hub_main_token)." >&2
   else
+    if [[ "$current_branch" == "main" && "$repo_name" == "skills-hub" ]]; then
+      echo "Refusing to operate on skills-hub main without the explicit confirmation token." >&2
+      echo "Set AUTO_DEV_ALLOW_SKILLS_HUB_MAIN=$skills_hub_main_token only for the protected command you intend to run." >&2
+    fi
     echo "Refusing to operate on protected branch: $current_branch" >&2
     exit 1
   fi
@@ -35,7 +40,7 @@ printf 'AUTO_DEV_BRANCH=%q\n' "$current_branch"
 
 chrome_mcp_port="${AUTO_DEV_CHROME_MCP_PORT:-9223}"
 chrome_mcp_ready=0
-if curl -s --max-time 1 "http://127.0.0.1:${chrome_mcp_port}/json/version" >/dev/null 2>&1; then
+if command -v curl >/dev/null 2>&1 && curl -s --max-time 1 "http://127.0.0.1:${chrome_mcp_port}/json/version" >/dev/null 2>&1; then
   chrome_mcp_ready=1
 else
   echo "Note: Chrome MCP remote debugging not detected on :${chrome_mcp_port}." >&2

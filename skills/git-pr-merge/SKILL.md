@@ -19,6 +19,8 @@ metadata:
 
 End-to-end pull request merge workflow: review the diff for quality, security, and docs/tests coverage, validate locally on disposable branches or worktrees, finalize with `gh pr merge` when safe, and clean up. Default target is the PR base branch. `dev` may proceed autonomously; `main` requires human confirmation before the final merge.
 
+Prefer Claude as the host when available. Medium and large PRs benefit from Claude's internal review and simplification helpers; other agents should fall back to the bundled sub-agent prompts in this skill.
+
 ## Quick start
 
 ```text

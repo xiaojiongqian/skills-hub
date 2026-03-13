@@ -97,12 +97,25 @@ skills-hub/
 - `patent-search-cn-us`
 - `playwright-mcp`
 
+## 使用说明补充
+
+- `auto-dev`
+  - GitHub Actions deploy 现在以远端 `origin/<current-branch>` 为准推断部署目标，不再把本地未推送的提交算进去。
+  - 默认用 `origin/main` 作为 diff 基线；如果仓库没有 `origin/main`，则回退到 `origin/HEAD`，也支持手动传 `--diff-base`。
+  - 显式传入的 `--workflow` 或 `AUTO_DEV_WORKFLOW` 优先级最高，不会再被 infer script 静默覆盖。
+  - `--wait` 现在会盯住本次刚 dispatch 的 workflow run，而不是分支上“最新的一条” run。
+  - 在 `skills-hub` 仓库上操作 `main` 仍然是特例，但现在需要显式确认 token：`AUTO_DEV_ALLOW_SKILLS_HUB_MAIN=skills-hub-main-confirmed`。
+
+- `git-pr-merge`
+  - 更推荐在 Claude 中使用。原因是 Claude 环境更容易直接调用其内部的 `code-reviewer` 和 `code-simplifier` 一类 review/simplify 能力，对中大型 PR 的预审更强。
+  - 在其他 agent 中也能使用，但会回退到 skill 自带的 review/simplify prompts，而不是直接复用 Claude 内部能力。
+
 ## 发布规范
 
 - 公开仓库即可，安装入口使用 GitHub 仓库地址语义：`owner/repo`
 - 每个 skill 目录使用 `skills/<name>/SKILL.md`
 - `SKILL.md` 顶部保留 YAML frontmatter，至少包含 `name` 和 `description`
-- 本仓库统一补充了 `version` 和 `license`，便于发布和后续维护
+- 本仓库通常补充 `license`，并按需补充 `metadata` 等兼容字段；不要假设所有 agent 都接受自定义 frontmatter key
 - skill 内引用脚本时，优先写成 `<path-to-skill>/scripts/...` 这种 agent 无关路径提示，不绑定 `~/.claude` 或 `~/.codex`
 - Claude Code 安装后直接使用标准 skill 名称，例如 `/git-pr-merge`
 
