@@ -65,6 +65,8 @@ skills-hub/
 │   │   ├── SKILL.md
 │   │   └── scripts/
 │   ├── chrome-mcp-remote/
+│   ├── design-eye/
+│   ├── eng-lead/
 │   ├── firebase-gcp-debug/
 │   ├── gh-address-comments/
 │   ├── gh-fix-ci/
@@ -72,6 +74,8 @@ skills-hub/
 │   ├── git-sync-dev-submodules/
 │   ├── jina-web-fetch/
 │   ├── patent-search-cn-us/
+│   ├── system-architect/
+│   ├── test-philosophy/
 │   └── playwright-mcp/
 ├── project-packs/                  # 项目专属扩展示例
 └── scripts/                        # 本仓库维护和本地兼容入口
@@ -88,6 +92,8 @@ skills-hub/
 
 - `auto-dev`
 - `chrome-mcp-remote`
+- `design-eye`
+- `eng-lead`
 - `firebase-gcp-debug`
 - `gh-address-comments`
 - `gh-fix-ci`
@@ -96,6 +102,21 @@ skills-hub/
 - `jina-web-fetch`
 - `patent-search-cn-us`
 - `playwright-mcp`
+- `system-architect`
+- `test-philosophy`
+
+## 第三方来源说明
+
+以下 skills 迁移自 `NatureBlueee/Nature-use-skills`：
+
+- `design-eye`
+- `eng-lead`
+- `system-architect`
+- `test-philosophy`
+
+来源仓库：`https://github.com/NatureBlueee/Nature-use-skills`
+
+原始许可：MIT License，`Copyright (c) 2026 Nature`
 
 ## 使用说明补充
 
