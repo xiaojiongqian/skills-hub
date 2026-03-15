@@ -7,7 +7,7 @@ description: >
   autonomous review first; if blocking issues, unresolved conflicts, failed
   checks, or insufficient docs/tests are found, comment on the PR and stop
   instead of merging.
-version: 1.2.0
+version: 1.3.0
 license: MIT
 metadata:
   short-description: Review and merge a GitHub PR safely
@@ -135,6 +135,29 @@ If review finds problems that are clearly outside the PR diff and not introduced
 - optionally create a GitHub issue to track the historical debt
 - note it in the PR summary comment
 
+## PR comment discipline
+
+Before posting any PR comment:
+
+1. Inspect recent PR comments from the current actor:
+   - `gh api repos/<owner>/<repo>/issues/<pr>/comments?per_page=10`
+2. Only post a new comment when there is materially new information, for example:
+   - final merge completed
+   - blocker set changed
+   - mergeability or conflict status changed
+   - validation outcome changed
+   - PR head SHA changed
+   - the previous run had no traceable comment and this run does
+3. If the latest merge comment from this workflow already states the same outcome and same actionable blocker set, do not add another comment.
+
+Comment content rules:
+
+- Always include `Execution harness: <claude|codex>` near the top. Use the current host agent identity.
+- Keep comments concise and high-signal. Prefer a one-line summary plus only the sections needed to act.
+- Do not restate obvious PR context that GitHub already shows on the same page, such as PR title or source/target branches, unless branch targeting itself is the issue.
+- Do not dump long command lists or repeat passing checks unless they are directly relevant to the decision.
+- Omit any section whose only content would be filler or repeated background.
+
 ### Blocking issues
 
 If review finds blocking issues, do all of the following:
@@ -153,20 +176,13 @@ Use a comment shape like:
 ```text
 ## PR merge blocked
 
-**PR**: #<number> <title>
-**Source → Target**: `<source_branch>` → `<target_branch>`
+**Execution harness**: <claude|codex>
+**Summary**: <one-line blocker summary>
 **Review mode**: <Small|Medium|Large> (<N> lines changed)
 
 ### Blocking issues
-| # | File | Line(s) | Severity | Description |
-|---|------|---------|----------|-------------|
-| 1 | path/to/file | L42-L50 | critical | description |
-
-### Docs/tests gaps
-- <description, or "None">
-
-### Conflict status
-- <clean / N conflicts auto-resolved / N conflicts unresolvable — details>
+- Prefer a short bullet list for 1-2 blockers.
+- Use a table only when there are several blockers and the structure adds clarity.
 
 ### Next actions
 1. specific fix instruction
@@ -324,44 +340,36 @@ After the merge command, verify the result:
 
 ## Post-merge PR comment
 
-Add a summary comment to the PR conversation regardless of whether the merge succeeded or failed. The comment must be clear, concise, and information-dense — no filler, every line carries signal.
+Add a summary comment to the PR conversation when the run produces a materially new outcome. The comment must be clear, concise, and information-dense — no filler, every line carries signal.
 
 Use a comment shape like:
 
 ```text
 ## PR merge <result>
 
-**PR**: #<number> <title>
-**Source → Target**: `<source_branch>` → `<target_branch>`
+**Execution harness**: <claude|codex>
 **Mode**: <standard-merge|review-only|target-override>
 **Strategy**: <merge|squash|rebase>
 **Merge commit**: `<sha>` (or "N/A" if not merged)
+**Summary**: <one-line result>
 
 ### Review
-- Mode: <Small|Medium|Large> (<N> lines changed)
-- Verdict: <PASS|BLOCK>
-- Findings: <one-line summary, or "No issues">
-
-### Docs/tests
-- Policy: <Strict|Update|Consistency>
-- Adequate: <yes|no — brief reason if no>
+- Include only if the review found a non-obvious issue or the verdict is not already clear from Summary.
 
 ### Validation
-- Commands run: `<cmd1>`, `<cmd2>`
-- Result: <all passed | failed — command and error>
+- Include only the smallest sufficient validation facts to justify the decision.
 
 ### Conflicts
-- <None | N conflicts resolved (list files) | Unresolvable — aborted>
+- Include only if conflicts existed or conflict status is the reason for the outcome.
 
 ### Cleanup
-- Source branch: <deleted|retained>
-- Worktree: <removed|N/A>
+- Include only if cleanup state matters for follow-up.
 
 ### Follow-up
-- <historical issues, linked GitHub issues, or "None">
+- Include only if a human still needs to act.
 ```
 
-Omit sections that are entirely empty or not applicable, but never omit Review, Validation, or the merge result.
+Never omit the merge result, `Execution harness`, or the validation outcome that justifies the decision.
 
 ## Branch cleanup
 
