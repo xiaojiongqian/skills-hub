@@ -2,7 +2,6 @@
 set -euo pipefail
 
 scope="user"
-chrome_port="${CHROME_MCP_PORT:-9223}"
 playwright_pkg="${PLAYWRIGHT_MCP_PACKAGE:-@playwright/mcp}"
 skip_playwright_browser=false
 download_only=false
@@ -12,11 +11,11 @@ usage() {
   cat <<USAGE
 Usage: scripts/install-claude-mcp.sh [options]
 
-Install/download Playwright + Chrome MCP packages and register them in Claude.
+Install/download the optional Playwright MCP package and register it in Claude.
+The `playwright` and `playwright-interactive` skills themselves are linked by `scripts/link-local.sh`.
 
 Options:
   --scope <local|user|project>  Claude MCP scope (default: user)
-  --chrome-port <port>          Chrome remote-debugging port (default: 9223)
   --playwright-pkg <name>       Playwright MCP npm package (default: @playwright/mcp)
   --skip-playwright-browser     Skip chromium download via playwright install
   --download-only               Only download packages, do not configure Claude MCP
@@ -61,10 +60,6 @@ while [[ $# -gt 0 ]]; do
       scope="$2"
       shift
       ;;
-    --chrome-port)
-      chrome_port="$2"
-      shift
-      ;;
     --playwright-pkg)
       playwright_pkg="$2"
       shift
@@ -103,9 +98,8 @@ require_cmd npx
 require_cmd claude
 
 if [[ "$configure_only" == "false" ]]; then
-  echo "[1/2] Downloading MCP packages via npx cache..."
+  echo "[1/2] Downloading Playwright MCP package via npx cache..."
   npx -y "$playwright_pkg" --help >/dev/null
-  npx -y chrome-devtools-mcp --help >/dev/null
 
   if [[ "$skip_playwright_browser" == "false" ]]; then
     echo "[1/2] Downloading Playwright Chromium browser..."
@@ -114,14 +108,13 @@ if [[ "$configure_only" == "false" ]]; then
 fi
 
 if [[ "$download_only" == "false" ]]; then
-  echo "[2/2] Registering MCP servers in Claude (scope=$scope)..."
+  echo "[2/2] Registering Playwright MCP server in Claude (scope=$scope)..."
 
-  upsert_mcp "playwright-mcp" npx -y "$playwright_pkg"
-  upsert_mcp "chrome-devtools" npx -y chrome-devtools-mcp --browserUrl "http://127.0.0.1:${chrome_port}" --no-usage-statistics
+  upsert_mcp "playwright" npx -y "$playwright_pkg"
 
-  echo "Configured MCP servers:"
+  echo "Configured MCP server:"
   claude mcp list
 fi
 
 echo "Done."
-echo "If Chrome MCP fails to connect, run: bash ~/.claude/scripts/start-chrome-mcp.sh"
+echo "For browser automation in Claude, prefer the linked \`playwright\` and \`playwright-interactive\` skills. This script is only for optional Playwright MCP setup."

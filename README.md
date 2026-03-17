@@ -64,19 +64,20 @@ skills-hub/
 │   ├── auto-dev/
 │   │   ├── SKILL.md
 │   │   └── scripts/
-│   ├── chrome-mcp-remote/
 │   ├── design-eye/
 │   ├── eng-lead/
 │   ├── firebase-gcp-debug/
 │   ├── gh-address-comments/
 │   ├── gh-fix-ci/
+│   ├── gh-issue-autodev/
 │   ├── git-pr-merge/
 │   ├── git-sync-dev-submodules/
 │   ├── jina-web-fetch/
 │   ├── patent-search-cn-us/
+│   ├── playwright/
+│   ├── playwright-interactive/
 │   ├── system-architect/
-│   ├── test-philosophy/
-│   └── playwright-mcp/
+│   └── test-philosophy/
 ├── project-packs/                  # 项目专属扩展示例
 └── scripts/                        # 本仓库维护和本地兼容入口
 ```
@@ -91,17 +92,18 @@ skills-hub/
 ## 当前包含的 Skills
 
 - `auto-dev`
-- `chrome-mcp-remote`
 - `design-eye`
 - `eng-lead`
 - `firebase-gcp-debug`
 - `gh-address-comments`
 - `gh-fix-ci`
+- `gh-issue-autodev`
 - `git-pr-merge`
 - `git-sync-dev-submodules`
 - `jina-web-fetch`
 - `patent-search-cn-us`
-- `playwright-mcp`
+- `playwright`
+- `playwright-interactive`
 - `system-architect`
 - `test-philosophy`
 
@@ -130,6 +132,11 @@ skills-hub/
 - `git-pr-merge`
   - 更推荐在 Claude 中使用。原因是 Claude 环境更容易直接调用其内部的 `code-reviewer` 和 `code-simplifier` 一类 review/simplify 能力，对中大型 PR 的预审更强。
   - 在其他 agent 中也能使用，但会回退到 skill 自带的 review/simplify prompts，而不是直接复用 Claude 内部能力。
+
+- `playwright` / `playwright-interactive`
+  - 这两个 skill 现在是浏览器自动化的主路径，会随着 `scripts/link-local.sh` 一起安装到 Codex 和 Claude。
+  - `playwright` 适合一次性、可复现的终端浏览器流程。
+  - `playwright-interactive` 适合持久会话、反复 reload、本地迭代和 Electron 调试；它要求当前 agent 具备持久 JavaScript REPL 能力。
 
 ## 发布规范
 

@@ -37,14 +37,3 @@ fi
 
 printf 'AUTO_DEV_REPO_ROOT=%q\n' "$repo_root"
 printf 'AUTO_DEV_BRANCH=%q\n' "$current_branch"
-
-chrome_mcp_port="${AUTO_DEV_CHROME_MCP_PORT:-9223}"
-chrome_mcp_ready=0
-if command -v curl >/dev/null 2>&1 && curl -s --max-time 1 "http://127.0.0.1:${chrome_mcp_port}/json/version" >/dev/null 2>&1; then
-  chrome_mcp_ready=1
-else
-  echo "Note: Chrome MCP remote debugging not detected on :${chrome_mcp_port}." >&2
-fi
-
-printf 'AUTO_DEV_CHROME_MCP_PORT=%q\n' "$chrome_mcp_port"
-printf 'AUTO_DEV_CHROME_MCP_READY=%q\n' "$chrome_mcp_ready"

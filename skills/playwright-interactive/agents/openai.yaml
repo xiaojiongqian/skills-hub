@@ -1,0 +1,6 @@
+interface:
+  display_name: "Playwright Interactive"
+  short_description: "Persistent Playwright QA for local web and Electron"
+  icon_small: "./assets/playwright-small.svg"
+  icon_large: "./assets/playwright.png"
+  default_prompt: "Use $playwright-interactive to debug this local web or Electron app in a persistent Playwright session, iterate across reloads, and capture QA evidence."

@@ -36,7 +36,7 @@ This skill is designed for reuse across projects. Keep business-specific behavio
 
 ## Bundled scripts
 - Resolve the installed skill directory as `<path-to-skill>`, then run scripts from `<path-to-skill>/scripts/`.
-- `auto-dev-preflight.sh`: verify repo scope and branch safety; emits `AUTO_DEV_REPO_ROOT`, `AUTO_DEV_BRANCH`, and Chrome MCP readiness hints.
+- `auto-dev-preflight.sh`: verify repo scope and branch safety; emits `AUTO_DEV_REPO_ROOT` and `AUTO_DEV_BRANCH`.
 - `auto-dev-deploy-dev.sh`: generic workflow trigger runner. It reads project-specific deploy mapping from `AUTO_DEV_INFER_SCRIPT` or `<repo>/.skills-hub/auto-dev/infer-targets.sh`.
   - The infer script reads changed files on `stdin`.
   - It may emit `workflow=<workflow-file>` and `input:<key>=<value>` lines.
@@ -47,14 +47,16 @@ This skill is designed for reuse across projects. Keep business-specific behavio
 - Keep `SKILL.md` and core scripts generic; inject business behavior via the infer script only.
 
 ## Browser automation preference
-- Default MCP for browser work: **chrome-devtools-mcp** (fast, reliable).
-  - If `AUTO_DEV_CHROME_MCP_READY=1`, use Chrome MCP immediately.
-  - If not ready, use a repo-local Chrome helper only when the project already provides one; otherwise fall back directly to Playwright.
-- Fallback MCP: **playwright-mcp** when chrome-devtools is unavailable or for cross-browser checks.
-  - Playwright supports Chromium/Firefox/WebKit (Safari-like engine on macOS). If the user needs the actual Safari app, ask for clarification.
+- Default browser route: **`playwright` skill** for one-shot or reproducible browser flows from the terminal.
+  - Use it for scripted repro, snapshots, screenshots, traces, data extraction, and quick web UI checks where restarting or re-opening the browser is acceptable.
+- Escalate to **`playwright-interactive`** when the task is iterative or stateful.
+  - Use it for repeated reloads during local development, persistent browser handles, Electron apps, richer functional plus visual QA, or when the same page/session must survive multiple edits.
+- Do not choose Chrome MCP as the default path or backup path.
+  - Only use a Chrome MCP workflow when the user explicitly asks for it, or when an existing project workflow already depends on it and it is confirmed working.
+  - For browser coverage beyond Chromium, prefer Playwright rather than adding a second MCP-specific branch. If the user needs the actual Safari app, ask for clarification.
 
 ## Capabilities
-- Use any skills and MCP tools (chrome-devtools-mcp preferred; Playwright as backup) for autonomous development and debugging.
+- Use coding, testing, cloud, web, and browser automation skills for autonomous development and debugging, with Playwright CLI first and Playwright Interactive for persistent sessions.
 - Allowed actions include inspecting Firestore/Storage data, accessing GCP, browsing web UIs, and triggering GitHub Actions for the current branch.
 
 ## Draft PR and publish flow

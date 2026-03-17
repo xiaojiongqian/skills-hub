@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub Issue Auto Dev"
+  short_description: "Fix GitHub issues end-to-end in current branch"
+  default_prompt: "Use $gh-issue-autodev to resolve a GitHub issue in this repository, and use $playwright for UI validation when needed."

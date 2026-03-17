@@ -14,7 +14,7 @@ Usage: scripts/link-local.sh [--codex-only] [--claude-only] [--install-claude-mc
 Options:
   --codex-only   only link skills/ to ~/.codex/skills
   --claude-only  only link skills/ and helper scripts to ~/.claude
-  --install-claude-mcp  run scripts/install-claude-mcp.sh after Claude linking
+  --install-claude-mcp  optionally run scripts/install-claude-mcp.sh after Claude linking
 USAGE
 }
 
@@ -74,7 +74,7 @@ if [[ "$link_claude" == "true" ]]; then
   done
 
   if [[ "$install_claude_mcp" == "true" ]]; then
-    echo "Installing Claude MCP servers (playwright-mcp + chrome-devtools)..."
+    echo "Installing optional Claude Playwright MCP server..."
     bash "$repo_root/scripts/install-claude-mcp.sh" --scope user
   fi
 fi
