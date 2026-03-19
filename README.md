@@ -83,7 +83,8 @@ skills-hub/
 │   │   ├── SKILL.md
 │   │   ├── agents/
 │   │   └── references/
-│   │       └── novel-system/       # 小说 family 共享资料唯一真源
+│   │       ├── novel-system/       # 小说 family 共享资料唯一真源
+│   │       └── orchestrator-system/ # 仅主调度使用的本地系统说明
 │   ├── novel-bible-manager/
 │   ├── novel-plot-architect/
 │   ├── novel-scene-dramatizer/
@@ -111,13 +112,16 @@ skills-hub/
 
 `novel-orchestrator-main/references/novel-system/` 是小说 skill 家族的共享资料唯一真源，用来收口：
 
-- 架构说明
 - 路由规则
 - 交互契约与 schema
 - 项目模板
 - 写作与审计参考
 
 各个 `novel-*` 子 skill 下的 `references/novel-system/` 是由同步脚本生成的分发副本，不手工维护。
+同步脚本会整树替换目标目录，因此真源里删掉的共享文件也会从各子 skill 副本里同步删除。
+
+`novel-orchestrator-main/references/orchestrator-system/` 只存放主调度自己的系统级说明，
+例如整体目标和 orchestrator / sub-skill 的职责边界；这部分不会同步到子 skill。
 
 ## 当前包含的 Skills
 

@@ -8,6 +8,9 @@ The canonical source lives at:
 
 Targets receive a generated copy at:
     skills/<novel-sub-skill>/references/novel-system/
+
+The target tree is replaced wholesale on each sync so files removed from the
+canonical source are also removed from generated copies.
 """
 
 from __future__ import annotations
@@ -64,6 +67,7 @@ def compare_trees(left: Path, right: Path) -> list[str]:
 
 
 def write_target(source: Path, target: Path) -> None:
+    """Replace the generated target tree with the canonical source tree."""
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.exists():
         shutil.rmtree(target)
