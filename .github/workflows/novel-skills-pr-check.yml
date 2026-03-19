@@ -1,0 +1,78 @@
+name: novel-skills-pr-check
+
+on:
+  pull_request:
+    paths:
+      - "skills/novel-orchestrator-main/**"
+      - "skills/novel-bible-manager/**"
+      - "skills/novel-plot-architect/**"
+      - "skills/novel-scene-dramatizer/**"
+      - "skills/novel-dialogue-editor/**"
+      - "skills/novel-continuity-auditor/**"
+      - "skills/novel-chapter-summarizer/**"
+      - "scripts/sync_novel_skills.py"
+      - ".github/workflows/novel-skills-*.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install validator dependency
+        run: python3 -m pip install --quiet pyyaml
+
+      - name: Sync generated references
+        run: python3 scripts/sync_novel_skills.py --write
+
+      - name: Validate SKILL.md frontmatter
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+          import yaml
+
+          skills = [
+              "skills/novel-orchestrator-main",
+              "skills/novel-bible-manager",
+              "skills/novel-plot-architect",
+              "skills/novel-scene-dramatizer",
+              "skills/novel-dialogue-editor",
+              "skills/novel-continuity-auditor",
+              "skills/novel-chapter-summarizer",
+          ]
+
+          for skill in skills:
+              skill_md = Path(skill) / "SKILL.md"
+              text = skill_md.read_text()
+              match = re.match(r"^---\n(.*?)\n---", text, re.DOTALL)
+              if not match:
+                  raise SystemExit(f"Invalid frontmatter in {skill_md}")
+              data = yaml.safe_load(match.group(1))
+              if not isinstance(data, dict):
+                  raise SystemExit(f"Frontmatter is not a mapping in {skill_md}")
+              if "name" not in data or "description" not in data:
+                  raise SystemExit(f"Missing name/description in {skill_md}")
+          print("Novel skill frontmatter is valid.")
+          PY
+
+      - name: Fail on unsynced generated files
+        run: |
+          if [ -n "$(git status --porcelain -- skills/novel-bible-manager skills/novel-plot-architect skills/novel-scene-dramatizer skills/novel-dialogue-editor skills/novel-continuity-auditor skills/novel-chapter-summarizer)" ]; then
+            echo "Generated novel skill references are out of sync."
+            echo "Run: python3 scripts/sync_novel_skills.py --write"
+            git status --short -- skills/novel-bible-manager skills/novel-plot-architect skills/novel-scene-dramatizer skills/novel-dialogue-editor skills/novel-continuity-auditor skills/novel-chapter-summarizer
+            git diff -- skills/novel-bible-manager skills/novel-plot-architect skills/novel-scene-dramatizer skills/novel-dialogue-editor skills/novel-continuity-auditor skills/novel-chapter-summarizer || true
+            exit 1
+          fi

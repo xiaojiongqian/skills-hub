@@ -1,0 +1,4 @@
+interface:
+  display_name: "Novel Orchestrator Main"
+  short_description: "Coordinate stateful novel workflows"
+  default_prompt: "Use $novel-orchestrator-main to route a long-form novel task, pick context, and manage state writebacks."
