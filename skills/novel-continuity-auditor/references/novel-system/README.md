@@ -1,19 +1,20 @@
 # novel-system
 
-长篇小说 skill 家族的共享架构文档命名空间。
-这里不是可安装 skill；这里存放的是所有 `novel-*` skills 共用的系统说明、契约、模板和参考资料。
+长篇小说 skill 家族的共享文档命名空间。
+这里不是可安装 skill；这里存放的是所有 `novel-*` skills 共用的公共契约、模板和参考资料。
 
 这里是唯一真源。
 各个子 skill 下的 `references/novel-system/` 都是由 `scripts/sync_novel_skills.py` 生成的分发副本，不手工维护。
 
+`novel-orchestrator-main` 自己的系统级说明已移到同级目录 `references/orchestrator-system/`，
+不再作为共享副本分发给各个子 skill。
+
 ## Read Order
 
-1. `overview.md`
-2. `architecture.md`
-3. `routing.md`
-4. `contracts.md`
-5. `context-model.md`
-6. `conventions.md`
+1. `routing.md`
+2. `contracts.md`
+3. `context-model.md`
+4. `conventions.md`
 
 按需继续读取：
 
@@ -26,10 +27,6 @@
 
 ## Layout
 
-- `overview.md`
-  - 系统目标和总原则
-- `architecture.md`
-  - 主 skill、子 skill 和全局状态职责
 - `routing.md`
   - 任务路由、串并行策略和标准工作流
 - `contracts.md`
@@ -44,3 +41,5 @@
   - 项目初始化模板
 - `references/`
   - 可按需加载的创作与审计参考
+- `skills/novel-orchestrator-main/references/orchestrator-system/`
+  - 仅存在于主 skill 真源中的本地系统说明，不会被复制到子 skill

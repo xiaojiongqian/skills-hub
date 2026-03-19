@@ -12,6 +12,7 @@ description: 长篇小说工程主调度与共享真源宿主。用于把长篇�
 
 把 `references/novel-system/` 视为小说 skill 家族的共享真源。
 子 skill 的本地 `references/novel-system/` 副本应由同步脚本生成，不要手工分别维护。
+把 `references/orchestrator-system/` 视为只属于主调度自己的本地系统说明，不参与子 skill 分发。
 
 ## Treat the Project as a Stateful System
 
@@ -159,11 +160,14 @@ description: 长篇小说工程主调度与共享真源宿主。用于把长篇�
 
 ## Shared Source
 
-- `references/novel-system/overview.md`
-- `references/novel-system/architecture.md`
 - `references/novel-system/routing.md`
 - `references/novel-system/contracts.md`
 - `references/novel-system/context-model.md`
 - `references/novel-system/conventions.md`
 - `references/novel-system/schemas/`
 - `references/novel-system/templates/`
+
+## Orchestrator-Only Source
+
+- `references/orchestrator-system/overview.md`
+- `references/orchestrator-system/architecture.md`
