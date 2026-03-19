@@ -1,0 +1,4 @@
+interface:
+  display_name: "Novel Chapter Summarizer"
+  short_description: "Compress chapters into durable state"
+  default_prompt: "Use $novel-chapter-summarizer to turn a chapter draft into concise summaries and state-sync patches."

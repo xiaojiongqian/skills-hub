@@ -1,0 +1,4 @@
+interface:
+  display_name: "Novel Bible Manager"
+  short_description: "Maintain novel canon and state files"
+  default_prompt: "Use $novel-bible-manager to normalize canon facts and update structured novel-state files."

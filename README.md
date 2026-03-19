@@ -39,10 +39,11 @@ npx skills add xiaojiongqian/skills-hub --list
 
 ## 更新
 
-仓库维护者只需要更新 `skills/` 下对应 skill 并推送到 GitHub：
+仓库维护者只需要更新 `skills/` 下对应 skill，以及必要时运行同步脚本把 `novel-orchestrator-main` 中的共享真源复制到各个 `novel-*` 子 skill：
 
 ```bash
-git add skills README.md scripts
+python3 scripts/sync_novel_skills.py --write
+git add skills README.md scripts .github
 git commit -m "Update skills"
 git push
 ```
@@ -55,6 +56,11 @@ npx skills update
 ```
 
 这就是当前推荐的快速更新机制，不需要重新手动 clone 或重新配置 agent 目录。
+
+对小说 skill 家族，仓库还包含两条自动化约定：
+
+- PR 到 `main` 时，`.github/workflows/novel-skills-pr-check.yml` 会运行同步脚本并检查生成副本是否已提交。
+- 推送到 `main` 时，`.github/workflows/novel-skills-main-sync.yml` 会再次运行同步脚本；如果发现主 skill 真源与子 skill 副本有漂移，会自动提交同步结果。
 
 ## 仓库结构
 
@@ -73,6 +79,17 @@ skills-hub/
 │   ├── git-pr-merge/
 │   ├── git-sync-dev-submodules/
 │   ├── jina-web-fetch/
+│   ├── novel-orchestrator-main/
+│   │   ├── SKILL.md
+│   │   ├── agents/
+│   │   └── references/
+│   │       └── novel-system/       # 小说 family 共享资料唯一真源
+│   ├── novel-bible-manager/
+│   ├── novel-plot-architect/
+│   ├── novel-scene-dramatizer/
+│   ├── novel-dialogue-editor/
+│   ├── novel-continuity-auditor/
+│   ├── novel-chapter-summarizer/
 │   ├── patent-search-cn-us/
 │   ├── playwright/
 │   ├── playwright-interactive/
@@ -85,9 +102,22 @@ skills-hub/
 `skills/` 是唯一真源目录。每个技能都放在独立子目录内，并且至少包含：
 
 - `SKILL.md`：YAML frontmatter + Markdown instructions
+
+常见的可选子目录包括：
+
 - `scripts/`：需要一起分发的可执行脚本
 - `references/`：按需加载的参考资料
 - `agents/openai.yaml`：可选的 UI 元数据
+
+`novel-orchestrator-main/references/novel-system/` 是小说 skill 家族的共享资料唯一真源，用来收口：
+
+- 架构说明
+- 路由规则
+- 交互契约与 schema
+- 项目模板
+- 写作与审计参考
+
+各个 `novel-*` 子 skill 下的 `references/novel-system/` 是由同步脚本生成的分发副本，不手工维护。
 
 ## 当前包含的 Skills
 
@@ -101,6 +131,13 @@ skills-hub/
 - `git-pr-merge`
 - `git-sync-dev-submodules`
 - `jina-web-fetch`
+- `novel-orchestrator-main`
+- `novel-bible-manager`
+- `novel-plot-architect`
+- `novel-scene-dramatizer`
+- `novel-dialogue-editor`
+- `novel-continuity-auditor`
+- `novel-chapter-summarizer`
 - `patent-search-cn-us`
 - `playwright`
 - `playwright-interactive`
