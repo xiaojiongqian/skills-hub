@@ -2,16 +2,16 @@
 
 ```yaml
 entity_type: "Character"
-id: "char-lin"
-name: "Lin"
-role: "protagonist"
+id: "char-a"
+name: "CHARACTER_A"
+role: "viewpoint-character"
 core_traits:
-  - "guarded"
-  - "strategic"
+  - "observant"
+  - "persistent"
 speech_profile:
-  cadence: "short and exact"
-  taboo_topics: ["childhood debt"]
-static_backstory: "..."
+  cadence: "controlled and precise"
+  taboo_topics: ["PROJECT_SPECIFIC_TRAUMA"]
+static_backstory: "Project-specific background facts live in CHARACTERS.md."
 ```
 
 静态角色设定优先进入 `CHARACTERS.md`。

@@ -1,4 +1,4 @@
 interface:
-  display_name: "Git Sync Dev + Worktrees"
-  short_description: "Fast sync for the current worktree or all dev-based worktrees, with optional submodule refresh"
-  default_prompt: "Use $git-sync-dev-submodules to sync my current worktree or, from a dev worktree, sync all worktrees. Refresh func-core by default unless I ask to skip submodules."
+  display_name: "Git Sync Dev Worktrees"
+  short_description: "Fast sync for the current worktree or all dev-based worktrees"
+  default_prompt: "Use $git-sync-dev-submodules to sync my current worktree or, from a dev worktree, sync all worktrees against the latest dev branch."

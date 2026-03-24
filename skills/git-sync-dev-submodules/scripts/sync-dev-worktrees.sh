@@ -7,8 +7,6 @@ source "$SCRIPT_DIR/lib-sync-dev.sh"
 
 REMOTE="origin"
 DEV_BRANCH="dev"
-SUBMODULES="func-core"
-SKIP_SUBMODULES=0
 DRY_RUN=0
 HAS_FAILURE=0
 
@@ -21,13 +19,10 @@ Fast sync flow for every worktree:
 2) Fetch once from the remote.
 3) Fast-forward the current '$DEV_BRANCH' worktree to '$REMOTE/$DEV_BRANCH'.
 4) Rebase every other non-detached, clean worktree onto the local '$DEV_BRANCH'.
-5) Refresh selected submodules by default.
 
 Options:
   --remote <name>           Remote name (default: origin)
   --dev-branch <name>       Source branch (default: dev)
-  --submodules <list|all>   Comma-separated submodule paths, or 'all' (default: func-core)
-  --skip-submodules         Skip submodule refresh
   --dry-run                 Print planned actions without changing git state
   --help                    Show this help
 USAGE
@@ -44,15 +39,6 @@ while [[ $# -gt 0 ]]; do
       [[ $# -lt 2 ]] && sync_dev_die "Missing value for --dev-branch"
       DEV_BRANCH="$2"
       shift 2
-      ;;
-    --submodules)
-      [[ $# -lt 2 ]] && sync_dev_die "Missing value for --submodules"
-      SUBMODULES="$2"
-      shift 2
-      ;;
-    --skip-submodules)
-      SKIP_SUBMODULES=1
-      shift
       ;;
     --dry-run)
       DRY_RUN=1
@@ -86,12 +72,6 @@ sync_dev_ensure_remote_branch "$CURRENT_WORKTREE" "$REMOTE" "$DEV_BRANCH"
 sync_dev_log "Fast-forward '$DEV_BRANCH' to '$REMOTE/$DEV_BRANCH'"
 if [[ "$DRY_RUN" -eq 0 ]]; then
   git -C "$CURRENT_WORKTREE" merge --ff-only "$REMOTE/$DEV_BRANCH" >/dev/null
-fi
-
-if [[ "$SKIP_SUBMODULES" -eq 0 ]]; then
-  sync_dev_update_submodules "$CURRENT_WORKTREE" "$SUBMODULES" "$DRY_RUN"
-else
-  sync_dev_log "Skip submodule refresh by flag"
 fi
 
 declare -a worktree_paths=()
@@ -151,15 +131,6 @@ for index in "${!worktree_paths[@]}"; do
     if ! git -C "$worktree_path" rebase "$DEV_BRANCH" >/dev/null; then
       git -C "$worktree_path" rebase --abort >/dev/null 2>&1 || true
       sync_dev_warn "Rebase failed for '$worktree_branch' in '$worktree_path'; aborted and skipped"
-      failed+=("$worktree_path:$worktree_branch")
-      HAS_FAILURE=1
-      continue
-    fi
-  fi
-
-  if [[ "$SKIP_SUBMODULES" -eq 0 ]]; then
-    if ! sync_dev_update_submodules "$worktree_path" "$SUBMODULES" "$DRY_RUN"; then
-      sync_dev_warn "Submodule refresh failed for '$worktree_branch' in '$worktree_path'"
       failed+=("$worktree_path:$worktree_branch")
       HAS_FAILURE=1
       continue

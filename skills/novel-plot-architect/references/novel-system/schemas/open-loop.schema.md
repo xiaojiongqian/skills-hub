@@ -2,11 +2,11 @@
 
 ```yaml
 entity_type: "OpenLoop"
-id: "loop-harbor-key"
-label: "Where is the real harbor key"
-introduced_in: "CH004"
+id: "loop-primary-question"
+label: "How will KEY_EVENT_A change the next move"
+introduced_in: "CHXXX"
 status: "active"
-stakes: "Controls access to the smuggling ledger"
-owners: ["char-lin", "char-shen"]
-expected_payoff_window: "arc-02"
+stakes: "Affects the next visible escalation in the project"
+owners: ["char-a", "char-b"]
+expected_payoff_window: "ARC-XX"
 ```

@@ -7,8 +7,6 @@ source "$SCRIPT_DIR/lib-sync-dev.sh"
 
 REMOTE="origin"
 DEV_BRANCH="dev"
-SUBMODULES="func-core"
-SKIP_SUBMODULES=0
 DRY_RUN=0
 
 usage() {
@@ -19,13 +17,10 @@ Fast sync flow for the current worktree:
 1) Fetch once from the remote.
 2) If current branch is '$DEV_BRANCH', fast-forward it to '$REMOTE/$DEV_BRANCH'.
 3) Otherwise, rebase the current branch onto '$REMOTE/$DEV_BRANCH'.
-4) Refresh selected submodules by default.
 
 Options:
   --remote <name>           Remote name (default: origin)
   --dev-branch <name>       Source branch (default: dev)
-  --submodules <list|all>   Comma-separated submodule paths, or 'all' (default: func-core)
-  --skip-submodules         Skip submodule refresh
   --dry-run                 Print planned actions without changing git state
   --help                    Show this help
 USAGE
@@ -42,15 +37,6 @@ while [[ $# -gt 0 ]]; do
       [[ $# -lt 2 ]] && sync_dev_die "Missing value for --dev-branch"
       DEV_BRANCH="$2"
       shift 2
-      ;;
-    --submodules)
-      [[ $# -lt 2 ]] && sync_dev_die "Missing value for --submodules"
-      SUBMODULES="$2"
-      shift 2
-      ;;
-    --skip-submodules)
-      SKIP_SUBMODULES=1
-      shift
       ;;
     --dry-run)
       DRY_RUN=1
@@ -89,12 +75,6 @@ else
   if [[ "$DRY_RUN" -eq 0 ]]; then
     git -C "$CURRENT_WORKTREE" rebase "$REMOTE/$DEV_BRANCH" >/dev/null
   fi
-fi
-
-if [[ "$SKIP_SUBMODULES" -eq 0 ]]; then
-  sync_dev_update_submodules "$CURRENT_WORKTREE" "$SUBMODULES" "$DRY_RUN"
-else
-  sync_dev_log "Skip submodule refresh by flag"
 fi
 
 sync_dev_log "Done"
