@@ -2,14 +2,14 @@
 
 ```yaml
 entity_type: "CurrentState"
-current_position: "Preparing CH013 draft"
+current_position: "Preparing CHXXX draft"
 recent_key_events:
-  - "Lin secured one night in the archive"
-primary_conflict: "Alliance with Shen may expose Lin's deception"
+  - "KEY_EVENT_A has shifted the project state"
+primary_conflict: "PRIMARY_CONFLICT_PLACEHOLDER"
 active_obligations:
-  - "Show the archive window in the next chapter"
+  - "Carry KEY_EVENT_A into the next chapter"
 do_not_forget:
-  - "The real key is still hidden in Lin's coat hem"
+  - "Preserve the established constraints and unresolved risks"
 non_negotiable_facts:
-  - "The harbor remains closed until dawn"
+  - "Do not contradict canon already admitted into the project"
 ```

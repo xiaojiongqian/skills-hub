@@ -73,6 +73,7 @@ skills-hub/
 │   ├── design-eye/
 │   ├── eng-lead/
 │   ├── firebase-gcp-debug/
+│   ├── find-skills/
 │   ├── gh-address-comments/
 │   ├── gh-fix-ci/
 │   ├── gh-issue-autodev/
@@ -129,6 +130,7 @@ skills-hub/
 - `design-eye`
 - `eng-lead`
 - `firebase-gcp-debug`
+- `find-skills`
 - `gh-address-comments`
 - `gh-fix-ci`
 - `gh-issue-autodev`
