@@ -135,6 +135,8 @@ Keep edits compressed: one rule per line, merge duplicates, remove stale notes.
 11. If a case passes with notable interaction difficulty, capture that friction in the report.
 
 Retry a failed interaction once before calling it a real failure.
+If auth or session state expires during a case, treat that as recoverable first: re-auth with the same resolved account using the smoke document, environment variables, or the agreed handoff path, return to the same route or business object, and retry the current case once.
+Only if auth still fails after recovery should the current case become `FAIL`; use `BLOCKED` for later dependent cases only when that failed baseline prevents further validation.
 
 ## Progressive Disclosure
 

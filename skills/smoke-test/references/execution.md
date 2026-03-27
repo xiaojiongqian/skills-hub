@@ -74,6 +74,13 @@ If the account or auth section is missing or vague:
 - validate by reaching the authenticated state successfully
 - write back only the role or label, auth method, and handoff note, never secrets
 
+If auth expires mid-case:
+1. preserve the current route and object identity, such as `taleId`, record id, share URL, or filter state
+2. re-auth with the same resolved account from the smoke file, environment variables, or approved handoff flow
+3. return to the same route or object before continuing
+4. refresh the evidence view, then retry the current case once
+5. if the same auth failure persists after recovery, mark the current case `FAIL`; only mark downstream dependent cases `BLOCKED` when that failed baseline prevents them from being validated
+
 ## Run loop
 
 Create the report bundle:
@@ -121,6 +128,7 @@ For each suite and case:
 10. mark the case `PASS`, `FAIL`, `BLOCKED`, or `SKIPPED`
 
 Retry a failed interaction once before calling it a real failure.
+If the failure is auth expiry rather than a normal interaction miss, run the auth recovery flow first, then retry the current case once from the same route or object.
 
 Useful browse patterns:
 - `snapshot -i`
