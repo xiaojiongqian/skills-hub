@@ -1,0 +1,15 @@
+base_url: http://localhost:3000
+pre:
+  - user is logged in
+flows:
+  - name: Primary create flow
+    route: /create
+    steps:
+      - perform the main create action
+    expect: success state appears
+  - name: Primary publish flow
+    route: /items
+    steps:
+      - open the latest draft
+      - perform the publish action
+    expect: status shows Published

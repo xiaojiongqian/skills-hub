@@ -1,0 +1,4 @@
+interface:
+  display_name: "Smoke Test"
+  short_description: "Lean self-improving smoke tests"
+  default_prompt: "Use $smoke-test to run a browser smoke test from this spec and tighten the smoke file if a recovered blocker reveals missing durable context."

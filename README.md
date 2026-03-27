@@ -95,6 +95,7 @@ skills-hub/
 │   ├── patent-search-cn-us/
 │   ├── playwright/
 │   ├── playwright-interactive/
+│   ├── smoke-test/
 │   ├── system-architect/
 │   └── test-philosophy/
 ├── project-packs/                  # 项目专属扩展示例
@@ -147,6 +148,7 @@ skills-hub/
 - `patent-search-cn-us`
 - `playwright`
 - `playwright-interactive`
+- `smoke-test`
 - `system-architect`
 - `test-philosophy`
 
