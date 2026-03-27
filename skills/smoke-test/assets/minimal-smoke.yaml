@@ -1,15 +1,25 @@
-base_url: http://localhost:3000
-pre:
-  - user is logged in
-flows:
-  - name: Primary create flow
-    route: /create
-    steps:
-      - perform the main create action
-    expect: success state appears
-  - name: Primary publish flow
-    route: /items
-    steps:
-      - open the latest draft
-      - perform the publish action
-    expect: status shows Published
+environment:
+  name: local-dev
+  base_url: http://localhost:3000
+  verify: landing page shows the TaleDraw creator shell
+  prerequisites:
+    - dev server is running
+accounts:
+  - name: Creator smoke
+    role: creator
+    auth: existing session cookie or direct login
+    handoff: none
+suites:
+  - name: Creator critical path
+    default_account: Creator smoke
+    cases:
+      - name: Open landing page
+        route: /
+        steps:
+          - open the page
+        expect: landing page is visible
+      - name: Primary create case
+        route: /create
+        steps:
+          - perform the main create action
+        expect: success state appears

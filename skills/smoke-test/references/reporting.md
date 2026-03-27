@@ -13,7 +13,7 @@ label when the user provided one. If the directory already exists, append `-2`,
 
 Keep screenshots sparse and evidence-driven.
 
-Usually use `1-2` screenshots per flow:
+Usually use `1-2` screenshots per case:
 - one key operation surface
 - one final success, failure, or blocked state
 
@@ -31,29 +31,35 @@ Include:
 - target URL
 - assumptions
 - source updates made during the run
-- summary table
-- one flow record per flow
+- summary table by suite and case
+- one case record per case, grouped by suite
+- interaction friction notes for passed cases when relevant
 - console/network summary
 - final status: `DONE`, `DONE_WITH_CONCERNS`, `BLOCKED`, or `NEEDS_CONTEXT`
 
 Structure:
 1. short summary table
-2. per-flow records, with screenshots embedded inside the matching flow record
+2. per-suite sections with per-case records, with screenshots embedded inside the matching case record
 
 Do not dump screenshots into a separate appendix.
 
 Use relative Markdown image links under `screenshots/`:
 
 ```md
-### Create storyboard
+## Suite: Creator critical path
+
+### Case: Create storyboard
 
 Status: PASS
 Route: /create
 Expectation: storyboard editor appears
+Account: creator
 
 ![Create storyboard start](screenshots/create-storyboard-start.png)
 ![Create storyboard end](screenshots/create-storyboard-end.png)
 
+Friction: Publish entry point was below the fold and easy to miss on the first pass.
+Source update: Clarified that the publish action is in the lower right toolbar.
 Notes: No console errors. Generate completed successfully.
 ```
 
@@ -68,9 +74,10 @@ Include:
 - source
 - url
 - source_updates
+- friction_cases
 - totals by status
-- failed flows
-- blocked flows
+- failed cases
+- blocked cases
 
 ## User-visible evidence
 

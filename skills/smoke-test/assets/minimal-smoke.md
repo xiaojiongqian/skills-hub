@@ -1,17 +1,28 @@
-# Smoke
+# Smoke Test
 
-base_url: http://localhost:3000
+## Environment
+- name: local-dev
+- base_url: http://localhost:3000
+- verify: landing page shows the TaleDraw creator shell
+- prerequisites: dev server is running
 
-## Pre
-- user is logged in
+## Accounts
+### Account: Creator smoke
+- role: creator
+- auth: existing session cookie or direct login
+- handoff: none
 
-## Flow: Primary create flow
-- go to /create
-- perform the main create action
-- expect the success state appears
+## Suite: Creator critical path
+- default_account: Creator smoke
 
-## Flow: Primary publish flow
-- go to /items
-- open the latest draft
-- perform the publish action
-- expect status shows Published
+### Case: Open landing page
+- route: /
+- steps:
+  - open the page
+- expect: landing page is visible
+
+### Case: Primary create case
+- route: /create
+- steps:
+  - perform the main create action
+- expect: success state appears
