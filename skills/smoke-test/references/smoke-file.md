@@ -45,8 +45,13 @@ Accounts or auth:
 Suites and cases:
 - each suite has a clear name
 - each suite may declare `default_account`
+- each suite may distinguish default-required coverage from optional or on-demand coverage
 - each case has route or page, minimal steps, and `expect`
 - each case may declare `account` to override the suite default
+- each case may declare or imply scope qualifiers such as `optional`, `on-demand`, `按需`, `专项`, `必跑`, or `常规必跑`
+
+Preserve stable suite labels from the source when they are already clear, such
+as `suite-2`. Do not rewrite them to aliases like `smoke-suite-2`.
 
 Preferred Markdown shape:
 - `## Environment`
@@ -109,6 +114,7 @@ Keep edits compressed:
 - remove stale notes
 - prefer one representative happy path over many near-duplicates
 - keep one clear `expect` per case unless multiple outcomes are independently critical
+- do not merge optional or on-demand cases into the default required path
 - if a case succeeds only after exploratory clarification, rewrite the case with the clearer durable wording
 
 ## Minimal shape

@@ -1,13 +1,9 @@
 # novel-system
 
-长篇小说 skill 家族的共享文档命名空间。
-这里不是可安装 skill；这里存放的是所有 `novel-*` skills 共用的公共契约、模板和参考资料。
+长篇、系列小说 skill 的参考资料命名空间。
+这里不是可安装 skill；这里存放 `novel-orchestrator-main` 按需加载的契约、模板、schema、创作参考和质量闭环说明。
 
-这里是唯一真源。
-各个子 skill 下的 `references/novel-system/` 都是由 `scripts/sync_novel_skills.py` 生成的分发副本，不手工维护。
-
-`novel-orchestrator-main` 自己的系统级说明已移到同级目录 `references/orchestrator-system/`，
-不再作为共享副本分发给各个子 skill。
+这里是唯一 reference namespace。不要再拆出第二套系统说明或复制出多个 novel reference 副本。
 
 ## Read Order
 
@@ -24,6 +20,8 @@
   - 初始化小说项目文件
 - `references/`
   - 查看写作、张力、审计、对白和上下文卫生指导
+  - 处理 sub-agent 超时与降级执行时，额外读取 `references/execution-reliability.md`
+  - 处理高质量章节闭环时，额外读取 `references/quality-council.md`
 
 ## Layout
 
@@ -41,5 +39,7 @@
   - 项目初始化模板
 - `references/`
   - 可按需加载的创作与审计参考
-- `skills/novel-orchestrator-main/references/orchestrator-system/`
-  - 仅存在于主 skill 真源中的本地系统说明，不会被复制到子 skill
+- `references/execution-reliability.md`
+  - sub-agent 粒度、超时恢复、降级执行和质量保护规则
+- `references/quality-council.md`
+  - 多席位质量评分、修复派工、counterforce 和收敛规则

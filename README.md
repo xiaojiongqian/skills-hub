@@ -39,10 +39,9 @@ npx skills add xiaojiongqian/skills-hub --list
 
 ## 更新
 
-仓库维护者只需要更新 `skills/` 下对应 skill，以及必要时运行同步脚本把 `novel-orchestrator-main` 中的共享真源复制到各个 `novel-*` 子 skill：
+仓库维护者只需要更新 `skills/` 下对应 skill，然后提交：
 
 ```bash
-python3 scripts/sync_novel_skills.py --write
 git add skills README.md scripts .github
 git commit -m "Update skills"
 git push
@@ -57,10 +56,9 @@ npx skills update
 
 这就是当前推荐的快速更新机制，不需要重新手动 clone 或重新配置 agent 目录。
 
-对小说 skill 家族，仓库还包含两条自动化约定：
+对小说 skill，仓库还包含一条自动化约定：
 
-- PR 到 `main` 时，`.github/workflows/novel-skills-pr-check.yml` 会运行同步脚本并检查生成副本是否已提交。
-- 推送到 `main` 时，`.github/workflows/novel-skills-main-sync.yml` 会再次运行同步脚本；如果发现主 skill 真源与子 skill 副本有漂移，会自动提交同步结果。
+- PR 到 `main` 时，`.github/workflows/novel-skills-pr-check.yml` 会校验 `novel-orchestrator-main` 的 skill frontmatter。
 
 ## 仓库结构
 
@@ -84,14 +82,7 @@ skills-hub/
 │   │   ├── SKILL.md
 │   │   ├── agents/
 │   │   └── references/
-│   │       ├── novel-system/       # 小说 family 共享资料唯一真源
-│   │       └── orchestrator-system/ # 仅主调度使用的本地系统说明
-│   ├── novel-bible-manager/
-│   ├── novel-plot-architect/
-│   ├── novel-scene-dramatizer/
-│   ├── novel-dialogue-editor/
-│   ├── novel-continuity-auditor/
-│   ├── novel-chapter-summarizer/
+│   │       └── novel-system/       # 小说创作、续作、状态和质量闭环资料
 │   ├── patent-search-cn-us/
 │   ├── playwright/
 │   ├── playwright-interactive/
@@ -112,18 +103,14 @@ skills-hub/
 - `references/`：按需加载的参考资料
 - `agents/openai.yaml`：可选的 UI 元数据
 
-`novel-orchestrator-main/references/novel-system/` 是小说 skill 家族的共享资料唯一真源，用来收口：
+`novel-orchestrator-main/references/novel-system/` 是小说 skill 的唯一 reference namespace，用来收口：
 
 - 路由规则
 - 交互契约与 schema
 - 项目模板
 - 写作与审计参考
-
-各个 `novel-*` 子 skill 下的 `references/novel-system/` 是由同步脚本生成的分发副本，不手工维护。
-同步脚本会整树替换目标目录，因此真源里删掉的共享文件也会从各子 skill 副本里同步删除。
-
-`novel-orchestrator-main/references/orchestrator-system/` 只存放主调度自己的系统级说明，
-例如整体目标和 orchestrator / sub-skill 的职责边界；这部分不会同步到子 skill。
+- 开放式续作和滚动规划
+- 多席位质量闭环
 
 ## 当前包含的 Skills
 
@@ -139,12 +126,6 @@ skills-hub/
 - `git-sync-dev-submodules`
 - `jina-web-fetch`
 - `novel-orchestrator-main`
-- `novel-bible-manager`
-- `novel-plot-architect`
-- `novel-scene-dramatizer`
-- `novel-dialogue-editor`
-- `novel-continuity-auditor`
-- `novel-chapter-summarizer`
 - `patent-search-cn-us`
 - `playwright`
 - `playwright-interactive`

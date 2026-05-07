@@ -1,4 +1,0 @@
-interface:
-  display_name: "Novel Dialogue Editor"
-  short_description: "Polish dialogue voice and subtext"
-  default_prompt: "Use $novel-dialogue-editor to revise dialogue for stronger voice distinction and subtext."

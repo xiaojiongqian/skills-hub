@@ -79,6 +79,13 @@ Turn the source into `3-10` smoke cases. Collapse near-duplicates and prioritize
 - critical search/filter/publish/checkout/share case, if relevant
 
 Group related cases under a clear suite label.
+Preserve the source suite and case naming when it is already clear. If the
+source uses labels like `suite-2`, keep `suite-2` and do not invent aliases
+such as `smoke-suite-2`.
+Keep the source distinction between default coverage and optional coverage. If
+the source marks a suite or case as `optional`, `on-demand`, `按需`, `专项`,
+`常规必跑`, `必跑`, or equivalent, preserve that meaning instead of promoting
+every case into the default run set.
 
 ## Living Smoke File
 
@@ -129,10 +136,11 @@ Keep edits compressed: one rule per line, merge duplicates, remove stale notes.
 5. Fill missing environment or auth context through auto-detection first, then concise user questions only when needed.
 6. Validate recovered context. Persist a detected URL only after an environment signal matches or at least one smoke case passes on that app.
 7. Write back the durable non-secret facts and any clarified case wording, then continue the run.
-8. Run each suite and case with the minimum happy-path actions.
-9. Inspect `console --errors`, `network`, and `snapshot -D` at key transitions.
-10. Mark each case `PASS`, `FAIL`, `BLOCKED`, or `SKIPPED`, then roll up suite and overall status.
-11. If a case passes with notable interaction difficulty, capture that friction in the report.
+8. Run the selected suite or suites with the minimum happy-path actions, preserving any required vs optional split from the source.
+9. By default, execute required or default cases first. Run `optional` or `on-demand` cases only when the user explicitly asked for them or the smoke source says they are in scope for the current change type.
+10. Inspect `console --errors`, `network`, and `snapshot -D` at key transitions.
+11. Mark each case `PASS`, `FAIL`, `BLOCKED`, or `SKIPPED`, then roll up suite and overall status.
+12. If a case passes with notable interaction difficulty, capture that friction in the report.
 
 Retry a failed interaction once before calling it a real failure.
 If auth or session state expires during a case, treat that as recoverable first: re-auth with the same resolved account using the smoke document, environment variables, or the agreed handoff path, return to the same route or business object, and retry the current case once.
@@ -162,6 +170,9 @@ Report bundles live under `.gstack/smoke-reports/<yyyymmdd-hhmm>-<suite-slug>`.
 Derive `suite-slug` from the selected smoke source or explicit suite label, then
 slug it to lowercase kebab-case. If the same minute and suite collide, append
 `-2`, `-3`, and so on.
+When the user or source selects a named suite, use that suite label as the
+report bundle name source. Preserve names like `suite-2`; do not rewrite them
+to `smoke-suite-2` or other aliases.
 
 `smoke-report.md` should contain:
 - source file and target URL
@@ -169,6 +180,7 @@ slug it to lowercase kebab-case. If the same minute and suite collide, append
 - source updates made during the run
 - summary table by suite and case
 - one case record per case, grouped by suite
+- optional or on-demand cases that were intentionally skipped, including why
 - interaction friction notes for passed-but-hard cases
 - console/network summary
 - final status
@@ -185,6 +197,7 @@ Keep the report easy to scan:
 - Do not modify application source code, tests, or CI files
 - The only non-report file this skill may edit is the smoke file, or a safe companion smoke file if the original is read-only or too broad for durable smoke rules
 - Keep scope to critical browser happy paths
+- Do not silently upgrade optional or on-demand coverage into required coverage
 - If the smoke file and live app disagree, report the mismatch instead of guessing
 - Stop after `3` blocker-level failures unless the user asks to continue
 - If environment or account info cannot be validated, stop as `NEEDS_CONTEXT` instead of inventing inputs

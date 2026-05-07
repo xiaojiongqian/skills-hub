@@ -1,4 +1,0 @@
-interface:
-  display_name: "Novel Continuity Auditor"
-  short_description: "Audit novel continuity and canon drift"
-  default_prompt: "Use $novel-continuity-auditor to audit a draft or outline for continuity and canon issues."

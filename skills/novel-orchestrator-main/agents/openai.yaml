@@ -1,4 +1,4 @@
 interface:
-  display_name: "Novel Orchestrator Main"
-  short_description: "Coordinate stateful novel workflows"
-  default_prompt: "Use $novel-orchestrator-main to route a long-form novel task, pick context, and manage state writebacks."
+  display_name: "Novel Orchestrator"
+  short_description: "Plan, write, audit, and maintain long-form series fiction"
+  default_prompt: "Use $novel-orchestrator-main to continue a long-form or series fiction project with planning, drafting, quality review, summaries, and conservative state writebacks."

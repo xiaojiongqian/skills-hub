@@ -1,4 +1,0 @@
-interface:
-  display_name: "Novel Scene Dramatizer"
-  short_description: "Expand approved beats into scene drafts"
-  default_prompt: "Use $novel-scene-dramatizer to turn approved beats into a dramatic scene or chapter draft."

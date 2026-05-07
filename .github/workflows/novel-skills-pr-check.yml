@@ -4,13 +4,6 @@ on:
   pull_request:
     paths:
       - "skills/novel-orchestrator-main/**"
-      - "skills/novel-bible-manager/**"
-      - "skills/novel-plot-architect/**"
-      - "skills/novel-scene-dramatizer/**"
-      - "skills/novel-dialogue-editor/**"
-      - "skills/novel-continuity-auditor/**"
-      - "skills/novel-chapter-summarizer/**"
-      - "scripts/sync_novel_skills.py"
       - ".github/workflows/novel-skills-*.yml"
   workflow_dispatch:
 
@@ -32,9 +25,6 @@ jobs:
       - name: Install validator dependency
         run: python3 -m pip install --quiet pyyaml
 
-      - name: Sync generated references
-        run: python3 scripts/sync_novel_skills.py --write
-
       - name: Validate SKILL.md frontmatter
         run: |
           python3 - <<'PY'
@@ -45,12 +35,6 @@ jobs:
 
           skills = [
               "skills/novel-orchestrator-main",
-              "skills/novel-bible-manager",
-              "skills/novel-plot-architect",
-              "skills/novel-scene-dramatizer",
-              "skills/novel-dialogue-editor",
-              "skills/novel-continuity-auditor",
-              "skills/novel-chapter-summarizer",
           ]
 
           for skill in skills:
@@ -66,13 +50,3 @@ jobs:
                   raise SystemExit(f"Missing name/description in {skill_md}")
           print("Novel skill frontmatter is valid.")
           PY
-
-      - name: Fail on unsynced generated files
-        run: |
-          if [ -n "$(git status --porcelain -- skills/novel-bible-manager skills/novel-plot-architect skills/novel-scene-dramatizer skills/novel-dialogue-editor skills/novel-continuity-auditor skills/novel-chapter-summarizer)" ]; then
-            echo "Generated novel skill references are out of sync."
-            echo "Run: python3 scripts/sync_novel_skills.py --write"
-            git status --short -- skills/novel-bible-manager skills/novel-plot-architect skills/novel-scene-dramatizer skills/novel-dialogue-editor skills/novel-continuity-auditor skills/novel-chapter-summarizer
-            git diff -- skills/novel-bible-manager skills/novel-plot-architect skills/novel-scene-dramatizer skills/novel-dialogue-editor skills/novel-continuity-auditor skills/novel-chapter-summarizer || true
-            exit 1
-          fi

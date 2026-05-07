@@ -33,6 +33,7 @@ Include:
 - source updates made during the run
 - summary table by suite and case
 - one case record per case, grouped by suite
+- optional or on-demand cases that were skipped on purpose, with the skip reason
 - interaction friction notes for passed cases when relevant
 - console/network summary
 - final status: `DONE`, `DONE_WITH_CONCERNS`, `BLOCKED`, or `NEEDS_CONTEXT`
@@ -75,6 +76,7 @@ Include:
 - url
 - source_updates
 - friction_cases
+- skipped_optional_cases
 - totals by status
 - failed cases
 - blocked cases

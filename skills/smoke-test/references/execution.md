@@ -18,6 +18,12 @@ Resolve account selection before running a case:
 3. else use the only account in the document
 4. else stop and ask the user to clarify the mapping
 
+Resolve execution scope before running a suite:
+1. preserve the source suite label when it is already specific, such as `suite-2`
+2. classify cases as default-required or optional-on-demand from explicit fields, section labels, or nearby prose
+3. treat markers such as `optional`, `on-demand`, `按需`, `专项`, `必跑`, `常规必跑`, `only when`, and similar wording as authoritative scope hints
+4. if the source distinguishes required vs optional cases, keep that split in the run plan and report instead of flattening everything into one mandatory list
+
 ## Resolve browse
 
 ```bash
@@ -114,18 +120,23 @@ mkdir -p "$REPORT_DIR/screenshots"
 Use the chosen smoke source path as `SOURCE_FILE` when available. If the run has a
 clear user-facing suite label that differs from the filename, set `SMOKE_SUITE`
 first and let it win.
+When the selected suite already has a stable source label, such as `suite-2`,
+reuse it directly. Do not prepend or replace it with aliases like
+`smoke-suite-2`.
 
 For each suite and case:
 1. resolve the case account
-2. `goto` the route
-3. `snapshot -i`
-4. capture a start screenshot only if it adds value
-5. execute the minimum happy-path actions
-6. inspect `console --errors`, `network`, and `snapshot -D` at key transitions
-7. capture the end, failure, or blocked state
-8. if the case passed but required retries, ambiguous controls, awkward scrolling, or workaround-like interaction, record a friction note for the report
-9. if the case wording was unclear and the run established a durable clearer wording, patch the smoke file and record the source update
-10. mark the case `PASS`, `FAIL`, `BLOCKED`, or `SKIPPED`
+2. decide whether the case is in the default run set or is optional-on-demand
+3. if the case is optional-on-demand and the user did not explicitly request it, and the smoke source does not say it is required for the current change scope, mark it `SKIPPED(optional)` and record why
+4. `goto` the route
+5. `snapshot -i`
+6. capture a start screenshot only if it adds value
+7. execute the minimum happy-path actions
+8. inspect `console --errors`, `network`, and `snapshot -D` at key transitions
+9. capture the end, failure, or blocked state
+10. if the case passed but required retries, ambiguous controls, awkward scrolling, or workaround-like interaction, record a friction note for the report
+11. if the case wording was unclear and the run established a durable clearer wording, patch the smoke file and record the source update
+12. mark the case `PASS`, `FAIL`, `BLOCKED`, or `SKIPPED`
 
 Retry a failed interaction once before calling it a real failure.
 If the failure is auth expiry rather than a normal interaction miss, run the auth recovery flow first, then retry the current case once from the same route or object.

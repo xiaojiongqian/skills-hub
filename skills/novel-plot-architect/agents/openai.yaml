@@ -1,4 +1,0 @@
-interface:
-  display_name: "Novel Plot Architect"
-  short_description: "Plan arcs, outlines, and chapter beats"
-  default_prompt: "Use $novel-plot-architect to plan an arc, chapter outline, or scene beat sequence."
