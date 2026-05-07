@@ -101,4 +101,5 @@ extensions:
   - `subagent`
   - `approved-fallback`
   - `orchestrator`
-- 严格模式下，标准章节 workflow 的 role task 默认应使用 `subagent`
+- 严格模式下，且用户或运行环境明确允许 sub-agent 时，标准章节 workflow 的 role task 可使用 `subagent`
+- 普通模式下，在主线程内串行切换 role pack，并把 `executor_mode` 标为 `orchestrator` 或 `approved-fallback`

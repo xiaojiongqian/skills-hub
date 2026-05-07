@@ -66,7 +66,7 @@ contract_version: "2026-03"
 - `proposed_writebacks`
 - `execution`
 
-当 workflow 声明 `require_subagents: true` 时，还至少检查：
+当 workflow 显式声明并获准使用 `require_subagents: true` 时，还至少检查：
 
 - `execution_policy`
 - `required_dispatches`

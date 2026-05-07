@@ -10,8 +10,8 @@ required_steps:
   continuity_audit: true
   dialogue_audit: false
 execution_policy:
-  orchestration_mode: "single-skill-role-subagents"
-  require_subagents: true
+  orchestration_mode: "single-skill-role-packs"
+  require_subagents: false
   trace_file: "09-execution-log.json"
   dispatch_budget:
     max_parallel_dispatches: 2
@@ -53,8 +53,9 @@ notes: "Do not archive until lint passes."
 
 说明：
 
-- `execution_policy.require_subagents: true`
-  - 表示标准章节 workflow 默认必须用真实 sub-agent
+- `execution_policy.require_subagents: false`
+  - 表示标准章节 workflow 可在主线程内串行切换 role pack
+  - 只有用户或运行环境明确允许时，才提升为 `true` 并使用真实 sub-agent
 - `required_dispatches`
   - 定义了哪些角色在当前 workflow 中是门禁要求
 - `when`

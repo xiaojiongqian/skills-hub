@@ -12,6 +12,15 @@ description: 长篇、系列小说的一体化创作与状态维护 skill。用�
 
 此 skill 是 novel 系列的唯一入口。需要专业分工时，在同一个 skill 内切换 `role pack` 或派发 sub-agent 扮演对应 role。
 
+## Runtime Capability Boundary
+
+先遵守当前运行环境和用户授权，再决定执行形态：
+
+- 若 sub-agent 可用且用户或系统允许，才派发 sub-agent。
+- 若 sub-agent 不可用或当前策略不允许，在主线程内串行切换 role pack。
+- 把无法派发的事实记录到 `execution`，并用 `approved-fallback` / `orchestrator` 标记执行模式。
+- 降级执行可以做规划、审稿、摘要和轻量修订；不要仅凭降级结果直接写回 canon。
+
 ## Load Context Progressively
 
 按需分层读取，不一次塞满：
@@ -93,6 +102,14 @@ description: 长篇、系列小说的一体化创作与状态维护 skill。用�
 8. 用 `canon_keeper` 生成最小状态写回。
 
 单点任务直接进入对应 role，不强制跑完整流程。
+
+新项目初始化默认流程：
+
+1. 确认用户要创建或重建小说项目状态。
+2. 读取 `references/novel-system/templates/` 中需要的模板。
+3. 创建最小可用集：`INDEX.md`、`CURRENT_STATE.md`、`OPEN_LOOPS.md`、`FORESHADOWS.md`、`CHARACTER_ARCS.md`、`ARC_STATUS.md`、`RECENT_EVENTS.md`。
+4. 按题材需要再创建 `WORLD.md`、`CHARACTERS.md`、`RULES.md`、`FACTIONS.md`、`LOCATIONS.md`、`THEMES.md`、`STYLE_GUIDE.md`。
+5. 只填用户已给出的事实；未知项保留为空或标为 `candidate`，不要代替用户确认 canon。
 
 如果用户一次给多章：
 
